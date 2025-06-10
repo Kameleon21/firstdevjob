@@ -1,5 +1,5 @@
 
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 import JobCard from '@/components/JobCard';
 import HeroSection from '@/components/HeroSection';
 import Header from '@/components/Header';
@@ -16,6 +16,7 @@ interface Job {
 
 async function fetchJobs(): Promise<Job[]> {
   try {
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from('Jobs')
       .select('*')

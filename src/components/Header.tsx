@@ -1,13 +1,25 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Home, BarChart3, Plus, Menu, X, User } from 'lucide-react';
+import { Home, BarChart3, Plus, Menu, X, User, LogOut } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { createClient } from '@/lib/supabase/client';
+import AuthModal from './AuthModal';
 
 const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const { user, isAuthenticated, loading } = useAuth();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    // Refresh the page to update the auth state
+    window.location.href = '/';
   };
 
   return (
@@ -33,6 +45,16 @@ const Header: React.FC = () => {
               Jobs
             </button>
 
+            {!loading && isAuthenticated && (
+              <button
+                onClick={() => console.log('Navigate to dashboard')}
+                className="flex items-center px-3 py-2 text-gray-300 hover:text-white rounded-lg transition-colors"
+              >
+                <BarChart3 size={20} className="mr-2" />
+                Dashboard
+              </button>
+            )}
+
             <button
               onClick={() => console.log('Show post job form')}
               className="flex items-center px-3 py-2 text-gray-300 hover:text-white rounded-lg transition-colors"
@@ -44,12 +66,32 @@ const Header: React.FC = () => {
 
           {/* Auth Section */}
           <div className="flex items-center space-x-4">
-            <button
-              onClick={() => console.log('Show sign in modal')}
-              className="hidden md:inline-flex px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              Sign In
-            </button>
+            {loading ? (
+              <div className="hidden md:block w-20 h-10 bg-gray-800 rounded-lg animate-pulse"></div>
+            ) : isAuthenticated ? (
+              <div className="flex items-center space-x-3">
+                <div className="hidden sm:block">
+                  <span className="text-sm text-gray-400">Welcome, </span>
+                  <span className="text-sm font-medium text-white">
+                    {user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0]}
+                  </span>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="p-2 text-gray-400 hover:text-white rounded-lg transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut size={20} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setAuthModalOpen(true)}
+                className="hidden md:inline-flex px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Sign In
+              </button>
+            )}
 
             {/* Mobile Menu Button */}
             <button
@@ -77,16 +119,18 @@ const Header: React.FC = () => {
               Jobs
             </button>
 
-            <button
-              onClick={() => {
-                console.log('Navigate to dashboard');
-                toggleMobileMenu();
-              }}
-              className="flex items-center w-full px-3 py-2 rounded-lg transition-colors text-gray-300 hover:text-white"
-            >
-              <BarChart3 size={20} className="mr-3" />
-              Dashboard
-            </button>
+            {!loading && isAuthenticated && (
+              <button
+                onClick={() => {
+                  console.log('Navigate to dashboard');
+                  toggleMobileMenu();
+                }}
+                className="flex items-center w-full px-3 py-2 rounded-lg transition-colors text-gray-300 hover:text-white"
+              >
+                <BarChart3 size={20} className="mr-3" />
+                Dashboard
+              </button>
+            )}
 
             <button
               onClick={() => {
@@ -99,19 +143,40 @@ const Header: React.FC = () => {
               Post Job
             </button>
 
-            <button
-              onClick={() => {
-                console.log('Show sign in modal');
-                toggleMobileMenu();
-              }}
-              className="flex items-center w-full px-3 py-2 text-gray-300 rounded-lg transition-colors hover:text-white"
-            >
-              <User size={20} className="mr-3" />
-              Sign In
-            </button>
+            {loading ? (
+              <div className="w-full h-12 bg-gray-800 rounded-lg animate-pulse"></div>
+            ) : !isAuthenticated ? (
+              <button
+                onClick={() => {
+                  setAuthModalOpen(true);
+                  toggleMobileMenu();
+                }}
+                className="flex items-center w-full px-3 py-2 text-gray-300 rounded-lg transition-colors hover:text-white"
+              >
+                <User size={20} className="mr-3" />
+                Sign In
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  handleSignOut();
+                  toggleMobileMenu();
+                }}
+                className="flex items-center w-full px-3 py-2 text-gray-300 rounded-lg transition-colors hover:text-white"
+              >
+                <LogOut size={20} className="mr-3" />
+                Sign Out
+              </button>
+            )}
           </nav>
         </div>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)} 
+      />
     </header>
   );
 };
