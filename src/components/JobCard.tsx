@@ -14,22 +14,22 @@ interface JobCardProps {
 
 export default function JobCard({ job }: JobCardProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+    <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:border-purple-600">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-1">
+          <h3 className="text-xl font-semibold text-white mb-1">
             {job.title}
           </h3>
-          <p className="text-lg text-gray-700 font-medium">
+          <p className="text-lg text-gray-300 font-medium">
             {job.company}
           </p>
         </div>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-gray-400">
           {new Date(job.created_at).toLocaleDateString()}
         </span>
       </div>
       
-      <div className="flex items-center gap-2 mb-4 text-sm text-gray-600">
+      <div className="flex items-center gap-2 mb-4 text-sm text-gray-400">
         <span className="flex items-center gap-1">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -40,11 +40,11 @@ export default function JobCard({ job }: JobCardProps) {
       </div>
 
       {job.tags && job.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-6">
           {job.tags.map((tag, index) => (
             <span
               key={index}
-              className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs font-medium"
+              className="bg-purple-900 text-purple-300 px-3 py-1 rounded-full text-xs font-medium border border-purple-700"
             >
               {tag}
             </span>
@@ -57,9 +57,12 @@ export default function JobCard({ job }: JobCardProps) {
           href={job.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2"
         >
           Apply Now
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
         </a>
       </div>
     </div>

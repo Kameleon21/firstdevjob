@@ -35,34 +35,47 @@ export default async function Home() {
   const jobs = await fetchJobs();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-black py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Find Your First Dev Job
+        <header className="text-center mb-16">
+          <h1 className="text-4xl font-bold text-white mb-6">
+            Find Your First 
+            <span className="text-purple-400"> Dev Job</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
             Discover amazing opportunities to start your career in tech
           </p>
         </header>
 
         {jobs.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="bg-white rounded-lg shadow-sm p-8 max-w-md mx-auto">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="text-center py-16">
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-xl p-12 max-w-md mx-auto">
+              <div className="mb-6">
+                <svg className="w-16 h-16 text-purple-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0H8m8 0v2a2 2 0 002 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2v-8a2 2 0 012-2V6" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-semibold text-white mb-4">
                 No Jobs Found
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-400 text-base">
                 There are currently no job listings available. Please check back later!
               </p>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {jobs.map((job) => (
-              <JobCard key={job.id} job={job} />
-            ))}
-          </div>
+          <>
+            <div className="text-center mb-8">
+              <p className="text-gray-400 text-sm">
+                Found {jobs.length} job{jobs.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {jobs.map((job) => (
+                <JobCard key={job.id} job={job} />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
