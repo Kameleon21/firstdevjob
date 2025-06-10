@@ -70,7 +70,7 @@ export default async function Home() {
                 Found {jobs.length} job{jobs.length !== 1 ? 's' : ''}
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {jobs.map((job) => (
                 <JobCard key={job.id} job={job} />
               ))}
