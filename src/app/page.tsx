@@ -1,6 +1,8 @@
 
 import { supabase } from '@/lib/supabase';
 import JobCard from '@/components/JobCard';
+import HeroSection from '@/components/HeroSection';
+import Header from '@/components/Header';
 
 interface Job {
   id: number;
@@ -35,17 +37,10 @@ export default async function Home() {
   const jobs = await fetchJobs();
 
   return (
-    <div className="min-h-screen bg-black py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <header className="text-center mb-16">
-          <h1 className="text-4xl font-bold text-white mb-6">
-            Find Your First 
-            <span className="text-purple-400"> Dev Job</span>
-          </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
-            Discover amazing opportunities to start your career in tech
-          </p>
-        </header>
+    <div className="min-h-screen bg-black">
+      <Header />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        <HeroSection />
 
         {jobs.length === 0 ? (
           <div className="text-center py-16">
@@ -66,6 +61,9 @@ export default async function Home() {
         ) : (
           <>
             <div className="text-center mb-8">
+              <h2 className="text-2xl font-semibold text-white mb-4">
+                Latest Opportunities
+              </h2>
               <p className="text-gray-400 text-sm">
                 Found {jobs.length} job{jobs.length !== 1 ? 's' : ''}
               </p>
