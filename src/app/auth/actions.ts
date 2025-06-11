@@ -44,6 +44,22 @@ export async function emailSignup(formData: FormData) {
   redirect('/auth/login?message=Check email to continue sign in process')
 }
 
+export async function resetPassword(formData: FormData) {
+  const supabase = await createClient()
+
+  const email = formData.get('email') as string
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/reset-password`,
+  })
+
+  if (error) {
+    redirect('/auth/login?message=Error sending reset email')
+  }
+
+  redirect('/auth/login?message=Check your email for reset instructions')
+}
+
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
