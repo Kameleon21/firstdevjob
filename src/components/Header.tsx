@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Home, BarChart3, Plus, Menu, X, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
@@ -27,12 +28,12 @@ const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <button
-              onClick={() => console.log('Navigate to home')}
+            <Link
+              href="/"
               className="text-2xl font-bold text-purple-400 hover:text-purple-300 transition-colors"
             >
               FirstDevJob
-            </button>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
@@ -46,13 +47,13 @@ const Header: React.FC = () => {
             </button>
 
             {!loading && isAuthenticated && (
-              <button
-                onClick={() => console.log('Navigate to dashboard')}
+              <Link
+                href="/dashboard"
                 className="flex items-center px-3 py-2 text-gray-300 hover:text-white rounded-lg transition-colors"
               >
                 <BarChart3 size={20} className="mr-2" />
                 Dashboard
-              </button>
+              </Link>
             )}
 
             <button
@@ -120,16 +121,14 @@ const Header: React.FC = () => {
             </button>
 
             {!loading && isAuthenticated && (
-              <button
-                onClick={() => {
-                  console.log('Navigate to dashboard');
-                  toggleMobileMenu();
-                }}
+              <Link
+                href="/dashboard"
+                onClick={toggleMobileMenu}
                 className="flex items-center w-full px-3 py-2 rounded-lg transition-colors text-gray-300 hover:text-white"
               >
                 <BarChart3 size={20} className="mr-3" />
                 Dashboard
-              </button>
+              </Link>
             )}
 
             <button

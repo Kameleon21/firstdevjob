@@ -52,7 +52,7 @@ async function fetchJobs(): Promise<Job[]> {
       location: job.location,
       url: job.url,
       status: job.status,
-      tags: job.job_tags?.map((jt: { tags: { id: number; name: string }[] }) => jt.tags).filter(Boolean) || []
+      tags: job.job_tags?.map((jt: { tags: { id: number; name: string } }) => jt.tags).filter(Boolean) || []
     })) || [];
 
     return jobsWithTags;
