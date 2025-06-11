@@ -5,7 +5,8 @@ interface Job {
   company: string;
   location: string;
   url: string;
-  tags: string[];
+  status: 'pending' | 'approved' | 'rejected';
+  tags: { id: number; name: string }[];
 }
 
 interface JobCardProps {
@@ -61,12 +62,12 @@ export default function JobCard({ job }: JobCardProps) {
       {/* Tags */}
       {job.tags && job.tags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6">
-          {job.tags.map((tag, index) => (
+          {job.tags.map((tag) => (
             <span
-              key={index}
+              key={tag.id}
               className="bg-purple-900 text-purple-300 px-3 py-1 rounded-full text-sm font-medium border border-purple-700"
             >
-              {tag}
+              {tag.name}
             </span>
           ))}
         </div>
