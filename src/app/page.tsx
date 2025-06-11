@@ -1,5 +1,4 @@
-
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 import JobCard from '@/components/JobCard';
 import HeroSection from '@/components/HeroSection';
 import Header from '@/components/Header';
@@ -11,14 +10,31 @@ interface Job {
   company: string;
   location: string;
   url: string;
-  tags: string[];
+  status: 'pending' | 'approved' | 'rejected';
+  tags: { id: number; name: string }[];
 }
 
 async function fetchJobs(): Promise<Job[]> {
   try {
+    const supabase = await createClient();
     const { data, error } = await supabase
-      .from('Jobs')
-      .select('*')
+      .from('job')
+      .select(`
+        id,
+        created_at,
+        title,
+        company,
+        location,
+        url,
+        status,
+        job_tags (
+          tags (
+            id,
+            name
+          )
+        )
+      `)
+      .eq('status', 'approved')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -26,7 +42,20 @@ async function fetchJobs(): Promise<Job[]> {
       return [];
     }
 
-    return data || [];
+    // Transform the data to flatten the tags structure
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const jobsWithTags: Job[] = data?.map((job: any) => ({
+      id: job.id,
+      created_at: job.created_at,
+      title: job.title,
+      company: job.company,
+      location: job.location,
+      url: job.url,
+      status: job.status,
+      tags: job.job_tags?.map((jt: { tags: { id: number; name: string }[] }) => jt.tags).filter(Boolean) || []
+    })) || [];
+
+    return jobsWithTags;
   } catch (error) {
     console.error('Error fetching jobs:', error);
     return [];
