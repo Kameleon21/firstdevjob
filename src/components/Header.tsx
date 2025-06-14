@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Home, BarChart3, Plus, Menu, X, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
@@ -10,6 +12,7 @@ const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { user, isAuthenticated, loading } = useAuth();
+  const pathname = usePathname();
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -27,32 +30,40 @@ const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <button
-              onClick={() => console.log('Navigate to home')}
+            <Link
+              href="/"
               className="text-2xl font-bold text-purple-400 hover:text-purple-300 transition-colors"
             >
               FirstDevJob
-            </button>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            <button
-              onClick={() => console.log('Navigate to jobs')}
-              className="flex items-center px-3 py-2 rounded-lg transition-colors bg-purple-900 text-purple-300"
+            <Link
+              href="/"
+              className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                pathname === '/' 
+                  ? 'bg-purple-900 text-purple-300' 
+                  : 'text-gray-300 hover:text-white'
+              }`}
             >
               <Home size={20} className="mr-2" />
               Jobs
-            </button>
+            </Link>
 
             {!loading && isAuthenticated && (
-              <button
-                onClick={() => console.log('Navigate to dashboard')}
-                className="flex items-center px-3 py-2 text-gray-300 hover:text-white rounded-lg transition-colors"
+              <Link
+                href="/dashboard"
+                className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                  pathname === '/dashboard' 
+                    ? 'bg-purple-900 text-purple-300' 
+                    : 'text-gray-300 hover:text-white'
+                }`}
               >
                 <BarChart3 size={20} className="mr-2" />
                 Dashboard
-              </button>
+              </Link>
             )}
 
             <button
@@ -108,28 +119,32 @@ const Header: React.FC = () => {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-gray-800 bg-gray-900">
           <nav className="px-4 py-4 space-y-2">
-            <button
-              onClick={() => {
-                console.log('Navigate to jobs');
-                toggleMobileMenu();
-              }}
-              className="flex items-center w-full px-3 py-2 rounded-lg transition-colors bg-purple-900 text-purple-300"
+            <Link
+              href="/"
+              onClick={toggleMobileMenu}
+              className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors ${
+                pathname === '/' 
+                  ? 'bg-purple-900 text-purple-300' 
+                  : 'text-gray-300 hover:text-white'
+              }`}
             >
               <Home size={20} className="mr-3" />
               Jobs
-            </button>
+            </Link>
 
             {!loading && isAuthenticated && (
-              <button
-                onClick={() => {
-                  console.log('Navigate to dashboard');
-                  toggleMobileMenu();
-                }}
-                className="flex items-center w-full px-3 py-2 rounded-lg transition-colors text-gray-300 hover:text-white"
+              <Link
+                href="/dashboard"
+                onClick={toggleMobileMenu}
+                className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors ${
+                  pathname === '/dashboard' 
+                    ? 'bg-purple-900 text-purple-300' 
+                    : 'text-gray-300 hover:text-white'
+                }`}
               >
                 <BarChart3 size={20} className="mr-3" />
                 Dashboard
-              </button>
+              </Link>
             )}
 
             <button
