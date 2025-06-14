@@ -203,7 +203,7 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
         ) : (
           <div 
             onClick={() => setIsEditingNotes(true)}
-            className="text-sm text-gray-400 min-h-[2rem] p-2 bg-gray-800 rounded border border-gray-700 cursor-pointer hover:bg-gray-750 hover:border-gray-600 transition-colors"
+            className="text-sm text-gray-400 min-h-[2rem] p-2 bg-gray-800 rounded border border-gray-700 cursor-pointer hover:bg-gray-700 hover:border-gray-600 transition-colors"
             title="Click to edit notes"
           >
             {notes || 'No notes added yet. Click here or the edit icon to add notes.'}
