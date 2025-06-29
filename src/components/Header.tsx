@@ -9,7 +9,11 @@ import { createClient } from '@/lib/supabase/client';
 import AuthModal from './AuthModal';
 import NotificationBadge from './NotificationBadge';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onPostJobClick?: () => void
+}
+
+const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { user, isAuthenticated, loading } = useAuth();
@@ -70,7 +74,7 @@ const Header: React.FC = () => {
             )}
 
             <button
-              onClick={() => console.log('Show post job form')}
+              onClick={onPostJobClick}
               className="flex items-center px-3 py-2 text-gray-300 hover:text-white rounded-lg transition-colors"
             >
               <Plus size={20} className="mr-2" />
@@ -154,7 +158,7 @@ const Header: React.FC = () => {
 
             <button
               onClick={() => {
-                console.log('Show post job form');
+                onPostJobClick?.();
                 toggleMobileMenu();
               }}
               className="flex items-center w-full px-3 py-2 text-gray-300 rounded-lg transition-colors hover:text-white"
