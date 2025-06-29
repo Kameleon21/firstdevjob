@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { toggleBookmark, getBookmarkStatus } from '@/app/actions/bookmarks'
 import AuthModal from './AuthModal'
+import { highlightText } from '@/lib/textHighlight'
 
 interface Job {
   id: number;
@@ -18,9 +19,10 @@ interface Job {
 
 interface JobCardProps {
   job: Job;
+  searchQuery?: string;
 }
 
-export default function JobCard({ job }: JobCardProps) {
+export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -66,7 +68,7 @@ export default function JobCard({ job }: JobCardProps) {
       {/* Header with title and bookmark */}
       <div className="flex justify-between items-start mb-6">
         <h3 className="text-xl font-semibold text-white pr-4">
-          {job.title}
+          {highlightText(job.title, searchQuery)}
         </h3>
         <button 
           onClick={handleBookmarkClick}
@@ -92,7 +94,7 @@ export default function JobCard({ job }: JobCardProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
         <span className="text-gray-300 font-medium">
-          {job.company}
+          {highlightText(job.company, searchQuery)}
         </span>
       </div>
 
@@ -103,7 +105,7 @@ export default function JobCard({ job }: JobCardProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         <span className="text-gray-300">
-          {job.location}
+          {highlightText(job.location, searchQuery)}
         </span>
       </div>
 
