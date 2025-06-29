@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Header from '@/components/Header'
 import DashboardJobCard from '@/components/DashboardJobCard'
+import { checkUserRole, getPendingJobs } from '@/app/actions/admin'
+import AdminSection from '@/components/AdminSection'
 
 export default async function DashboardPage() {
   // Check if user is authenticated
@@ -14,7 +16,20 @@ export default async function DashboardPage() {
     redirect('/auth/login?message=Please sign in to view your dashboard')
   }
 
-  const bookmarks = await getUserBookmarks()
+  const [bookmarks, userRole] = await Promise.all([
+    getUserBookmarks(),
+    checkUserRole()
+  ])
+
+  // Fetch pending jobs if user is admin/moderator
+  let pendingJobs: Awaited<ReturnType<typeof getPendingJobs>> = []
+  if (userRole.isModerator) {
+    try {
+      pendingJobs = await getPendingJobs()
+    } catch (error) {
+      console.error('Error fetching pending jobs:', error)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-black">
@@ -26,6 +41,9 @@ export default async function DashboardPage() {
             Track your job applications and update their status as you progress through the hiring process.
           </p>
         </div>
+
+        {/* Admin Section for moderators/admins */}
+        <AdminSection initialPendingJobs={pendingJobs} userRole={userRole} />
 
         {bookmarks.length === 0 ? (
           <div className="text-center py-16">

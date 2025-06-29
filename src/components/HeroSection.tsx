@@ -1,6 +1,22 @@
 'use client'
 
-export default function HeroSection() {
+import { useState } from 'react'
+import PostJobModal from './PostJobModal'
+import Toast from './Toast'
+
+interface HeroSectionProps {
+  allTags: string[]
+}
+
+export default function HeroSection({ allTags }: HeroSectionProps) {
+  const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+
+  const handleJobPostSuccess = (message: string) => {
+    setToastMessage(message)
+    setShowToast(true)
+  }
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -13,7 +29,7 @@ export default function HeroSection() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-            onClick={() => console.log('Post a Job clicked')}
+            onClick={() => setIsPostJobModalOpen(true)}
             className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,6 +45,23 @@ export default function HeroSection() {
           </button>
         </div>
       </div>
+
+      {/* Post Job Modal */}
+      <PostJobModal
+        isOpen={isPostJobModalOpen}
+        onClose={() => setIsPostJobModalOpen(false)}
+        allTags={allTags}
+        onSuccess={handleJobPostSuccess}
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        message={toastMessage}
+        type="success"
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        duration={8000}
+      />
     </div>
   );
 } 

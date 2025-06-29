@@ -71,7 +71,7 @@ export default async function Home() {
     <div className="min-h-screen bg-black">
       <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <HeroSection />
+        <HeroSection allTags={allTags} />
         <div className="mt-16">
           <JobSearchWrapper initialJobs={jobs} allTags={allTags} />
         </div>

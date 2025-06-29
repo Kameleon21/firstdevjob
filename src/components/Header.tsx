@@ -7,6 +7,7 @@ import { Home, BarChart3, Plus, Menu, X, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from './AuthModal';
+import NotificationBadge from './NotificationBadge';
 
 const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -53,17 +54,19 @@ const Header: React.FC = () => {
             </Link>
 
             {!loading && isAuthenticated && (
-              <Link
-                href="/dashboard"
-                className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                  pathname === '/dashboard' 
-                    ? 'bg-purple-900 text-purple-300' 
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                <BarChart3 size={20} className="mr-2" />
-                Dashboard
-              </Link>
+              <NotificationBadge>
+                <Link
+                  href="/dashboard"
+                  className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                    pathname === '/dashboard' 
+                      ? 'bg-purple-900 text-purple-300' 
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  <BarChart3 size={20} className="mr-2" />
+                  Dashboard
+                </Link>
+              </NotificationBadge>
             )}
 
             <button
@@ -133,18 +136,20 @@ const Header: React.FC = () => {
             </Link>
 
             {!loading && isAuthenticated && (
-              <Link
-                href="/dashboard"
-                onClick={toggleMobileMenu}
-                className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors ${
-                  pathname === '/dashboard' 
-                    ? 'bg-purple-900 text-purple-300' 
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                <BarChart3 size={20} className="mr-3" />
-                Dashboard
-              </Link>
+              <NotificationBadge>
+                <Link
+                  href="/dashboard"
+                  onClick={toggleMobileMenu}
+                  className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors ${
+                    pathname === '/dashboard' 
+                      ? 'bg-purple-900 text-purple-300' 
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  <BarChart3 size={20} className="mr-3" />
+                  Dashboard
+                </Link>
+              </NotificationBadge>
             )}
 
             <button
