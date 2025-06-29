@@ -4,9 +4,17 @@ interface HighlightTextProps {
   text: string
   searchQuery: string
   className?: string
+  highlightBackgroundColor?: string
+  highlightTextColor?: string
 }
 
-export function highlightText(text: string, searchQuery: string, className = 'bg-yellow-200 bg-opacity-40 text-yellow-100'): React.ReactNode {
+export function highlightText(
+  text: string,
+  searchQuery: string,
+  className = '',
+  highlightBackgroundColor = 'rgba(0, 0, 0, 0.1)', // Accessible default background color
+  highlightTextColor = '#000000' // Accessible default text color
+): React.ReactNode {
   if (!searchQuery.trim() || !text) {
     return text
   }
@@ -41,8 +49,8 @@ export function highlightText(text: string, searchQuery: string, className = 'bg
         key: index,
         className: className,
         style: { 
-          backgroundColor: 'rgba(253, 224, 71, 0.5)',
-          color: 'inherit',
+          backgroundColor: highlightBackgroundColor,
+          color: highlightTextColor,
           padding: '0'
         }
       }, part)
@@ -53,6 +61,12 @@ export function highlightText(text: string, searchQuery: string, className = 'bg
 }
 
 // React component version for easier use in JSX
-export function HighlightText({ text, searchQuery, className }: HighlightTextProps) {
-  return React.createElement(React.Fragment, null, highlightText(text, searchQuery, className))
+export function HighlightText({ 
+  text, 
+  searchQuery, 
+  className = '',
+  highlightBackgroundColor = 'rgba(0, 0, 0, 0.1)',
+  highlightTextColor = '#000000'
+}: HighlightTextProps) {
+  return React.createElement(React.Fragment, null, highlightText(text, searchQuery, className, highlightBackgroundColor, highlightTextColor))
 } 

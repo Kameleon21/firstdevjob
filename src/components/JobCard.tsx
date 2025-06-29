@@ -68,7 +68,7 @@ export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
       {/* Header with title and bookmark */}
       <div className="flex justify-between items-start mb-6">
         <h3 className="text-xl font-semibold text-white pr-4">
-          {highlightText(job.title, searchQuery)}
+          {highlightText(job.title, searchQuery, '', 'rgba(255, 235, 59, 0.3)', '#1f2937')}
         </h3>
         <button 
           onClick={handleBookmarkClick}
@@ -94,7 +94,7 @@ export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
         <span className="text-gray-300 font-medium">
-          {highlightText(job.company, searchQuery)}
+          {highlightText(job.company, searchQuery, '', 'rgba(255, 235, 59, 0.3)', '#1f2937')}
         </span>
       </div>
 
@@ -105,7 +105,7 @@ export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         <span className="text-gray-300">
-          {highlightText(job.location, searchQuery)}
+          {highlightText(job.location, searchQuery, '', 'rgba(255, 235, 59, 0.3)', '#1f2937')}
         </span>
       </div>
 

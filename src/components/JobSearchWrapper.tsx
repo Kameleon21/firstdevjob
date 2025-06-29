@@ -26,11 +26,12 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
   const [selectedTags, setSelectedTags] = useState<string[]>([])
 
   // Debounce search query for better performance
+  const DEBOUNCE_DELAY_MS = 150;
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery)
-    }, 150) // Shorter debounce for better responsiveness
-
+    }, DEBOUNCE_DELAY_MS) // Shorter debounce for better responsiveness
     return () => clearTimeout(timer)
   }, [searchQuery])
 
