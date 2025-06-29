@@ -7,8 +7,13 @@ import { Home, BarChart3, Plus, Menu, X, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from './AuthModal';
+import NotificationBadge from './NotificationBadge';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onPostJobClick?: () => void
+}
+
+const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { user, isAuthenticated, loading } = useAuth();
@@ -53,21 +58,23 @@ const Header: React.FC = () => {
             </Link>
 
             {!loading && isAuthenticated && (
-              <Link
-                href="/dashboard"
-                className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                  pathname === '/dashboard' 
-                    ? 'bg-purple-900 text-purple-300' 
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                <BarChart3 size={20} className="mr-2" />
-                Dashboard
-              </Link>
+              <NotificationBadge>
+                <Link
+                  href="/dashboard"
+                  className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                    pathname === '/dashboard' 
+                      ? 'bg-purple-900 text-purple-300' 
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  <BarChart3 size={20} className="mr-2" />
+                  Dashboard
+                </Link>
+              </NotificationBadge>
             )}
 
             <button
-              onClick={() => console.log('Show post job form')}
+              onClick={onPostJobClick}
               className="flex items-center px-3 py-2 text-gray-300 hover:text-white rounded-lg transition-colors"
             >
               <Plus size={20} className="mr-2" />
@@ -133,23 +140,25 @@ const Header: React.FC = () => {
             </Link>
 
             {!loading && isAuthenticated && (
-              <Link
-                href="/dashboard"
-                onClick={toggleMobileMenu}
-                className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors ${
-                  pathname === '/dashboard' 
-                    ? 'bg-purple-900 text-purple-300' 
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                <BarChart3 size={20} className="mr-3" />
-                Dashboard
-              </Link>
+              <NotificationBadge>
+                <Link
+                  href="/dashboard"
+                  onClick={toggleMobileMenu}
+                  className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors ${
+                    pathname === '/dashboard' 
+                      ? 'bg-purple-900 text-purple-300' 
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  <BarChart3 size={20} className="mr-3" />
+                  Dashboard
+                </Link>
+              </NotificationBadge>
             )}
 
             <button
               onClick={() => {
-                console.log('Show post job form');
+                onPostJobClick?.();
                 toggleMobileMenu();
               }}
               className="flex items-center w-full px-3 py-2 text-gray-300 rounded-lg transition-colors hover:text-white"

@@ -1,7 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import HeroSection from '@/components/HeroSection';
-import Header from '@/components/Header';
-import JobSearchWrapper from '@/components/JobSearchWrapper';
+import PageWrapper from '@/components/PageWrapper';
 import { getAllTags } from '@/app/actions/search';
 
 interface Job {
@@ -68,14 +66,6 @@ export default async function Home() {
   const allTags = await getAllTags();
 
   return (
-    <div className="min-h-screen bg-black">
-      <Header />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <HeroSection />
-        <div className="mt-16">
-          <JobSearchWrapper initialJobs={jobs} allTags={allTags} />
-        </div>
-      </div>
-    </div>
+    <PageWrapper initialJobs={jobs} allTags={allTags} />
   );
 }
