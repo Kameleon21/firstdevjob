@@ -219,6 +219,7 @@ const ProfilePage: React.FC = () => {
                 className="w-full px-3 py-2 pr-10 bg-gray-800 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Enter new password"
                 minLength={6}
+                aria-label="New password"
                 required
               />
               <button
@@ -242,6 +243,7 @@ const ProfilePage: React.FC = () => {
                 className="w-full px-3 py-2 pr-10 bg-gray-800 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Confirm new password"
                 minLength={6}
+                aria-label="Confirm new password"
                 required
               />
               <button
