@@ -1,10 +1,14 @@
 'use client'
 
+import { useAuth } from '@/hooks/useAuth'
+
 interface HeroSectionProps {
   onPostJobClick: () => void
 }
 
 export default function HeroSection({ onPostJobClick }: HeroSectionProps) {
+  const { isAuthenticated, loading } = useAuth()
+  
   return (
     <div className="space-y-8">
       {/* Hero Section */}
@@ -25,12 +29,14 @@ export default function HeroSection({ onPostJobClick }: HeroSectionProps) {
             </svg>
             Post a Job
           </button>
-          <button
-            onClick={() => console.log('Sign Up to Track Jobs clicked')}
-            className="w-full sm:w-auto px-6 py-3 border border-purple-600 text-purple-400 rounded-xl hover:bg-purple-900 transition-colors font-semibold text-sm sm:text-base"
-          >
-            Sign Up to Track
-          </button>
+          {!loading && !isAuthenticated && (
+            <button
+              onClick={() => console.log('Sign Up to Track Jobs clicked')}
+              className="w-full sm:w-auto px-6 py-3 border border-purple-600 text-purple-400 rounded-xl hover:bg-purple-900 transition-colors font-semibold text-sm sm:text-base"
+            >
+              Sign Up to Track
+            </button>
+          )}
         </div>
       </div>
     </div>

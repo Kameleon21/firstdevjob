@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BarChart3, Plus, Menu, X, User, LogOut } from 'lucide-react';
+import { Home, BarChart3, Plus, Menu, X, User, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from './AuthModal';
@@ -80,6 +80,20 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               <Plus size={20} className="mr-2" />
               Post Job
             </button>
+
+            {!loading && isAuthenticated && (
+              <Link
+                href="/profile"
+                className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                  pathname === '/profile' 
+                    ? 'bg-purple-900 text-purple-300' 
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                <Settings size={20} className="mr-2" />
+                Profile
+              </Link>
+            )}
           </nav>
 
           {/* Auth Section */}
@@ -166,6 +180,21 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               <Plus size={20} className="mr-3" />
               Post Job
             </button>
+
+            {!loading && isAuthenticated && (
+              <Link
+                href="/profile"
+                onClick={toggleMobileMenu}
+                className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors ${
+                  pathname === '/profile' 
+                    ? 'bg-purple-900 text-purple-300' 
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                <Settings size={20} className="mr-3" />
+                Profile
+              </Link>
+            )}
 
             {loading ? (
               <div className="w-full h-12 bg-gray-800 rounded-lg animate-pulse"></div>
