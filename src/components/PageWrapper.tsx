@@ -21,10 +21,9 @@ interface Job {
 interface PageWrapperProps {
   initialJobs: Job[]
   allTags: string[]
-  bookmarkIds: Set<number>
 }
 
-export default function PageWrapper({ initialJobs, allTags, bookmarkIds }: PageWrapperProps) {
+export default function PageWrapper({ initialJobs, allTags }: PageWrapperProps) {
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -53,7 +52,6 @@ export default function PageWrapper({ initialJobs, allTags, bookmarkIds }: PageW
           <JobSearchWrapper 
             initialJobs={initialJobs} 
             allTags={allTags} 
-            bookmarkIds={bookmarkIds}
           />
         </div>
       </div>

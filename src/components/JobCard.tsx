@@ -20,7 +20,6 @@ interface Job {
 interface JobCardProps {
   job: Job;
   searchQuery?: string;
-  isBookmarked?: boolean;
 }
 
 export default function JobCard({ job, searchQuery = '' }: JobCardProps) {

@@ -18,10 +18,9 @@ interface Job {
 interface JobSearchWrapperProps {
   initialJobs: Job[]
   allTags: string[]
-  bookmarkIds: Set<number>
 }
 
-export default function JobSearchWrapper({ initialJobs, allTags, bookmarkIds }: JobSearchWrapperProps) {
+export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrapperProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -166,7 +165,6 @@ export default function JobSearchWrapper({ initialJobs, allTags, bookmarkIds }: 
                 key={job.id} 
                 job={job} 
                 searchQuery={debouncedSearchQuery}
-                isBookmarked={bookmarkIds.has(job.id)}
               />
             ))}
           </div>

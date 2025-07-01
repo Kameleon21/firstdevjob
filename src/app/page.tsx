@@ -61,44 +61,11 @@ async function fetchJobs(): Promise<Job[]> {
   }
 }
 
-async function fetchUserBookmarkIds(): Promise<Set<number>> {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return new Set();
-    }
-
-    const { data, error } = await supabase
-      .from('tracked_applications')
-      .select('job_id')
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Error fetching user bookmarks:', error);
-      return new Set();
-    }
-
-    return new Set(data?.map(bookmark => bookmark.job_id) || []);
-  } catch (error) {
-    console.error('Error fetching user bookmarks:', error);
-    return new Set();
-  }
-}
-
 export default async function Home() {
-  const [jobs, allTags, bookmarkIds] = await Promise.all([
-    fetchJobs(),
-    getAllTags(),
-    fetchUserBookmarkIds()
-  ]);
+  const jobs = await fetchJobs();
+  const allTags = await getAllTags();
 
   return (
-    <PageWrapper 
-      initialJobs={jobs} 
-      allTags={allTags} 
-      bookmarkIds={bookmarkIds}
-    />
+    <PageWrapper initialJobs={jobs} allTags={allTags} />
   );
 }
