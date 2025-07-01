@@ -97,11 +97,11 @@ const ProfilePage: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 text-white">
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-800 rounded w-1/4 mb-8"></div>
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-              <div className="h-6 bg-gray-800 rounded w-1/3 mb-4"></div>
+            <div className="h-6 sm:h-8 bg-gray-800 rounded w-1/4 mb-6 sm:mb-8"></div>
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+              <div className="h-5 sm:h-6 bg-gray-800 rounded w-1/3 mb-4"></div>
               <div className="h-4 bg-gray-800 rounded w-1/2"></div>
             </div>
           </div>
@@ -113,10 +113,10 @@ const ProfilePage: React.FC = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-950 text-white">
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="bg-red-900 border border-red-700 rounded-xl p-6">
-            <h2 className="text-xl font-semibold text-red-300 mb-2">Error</h2>
-            <p className="text-red-200">{error}</p>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+          <div className="bg-red-900 border border-red-700 rounded-xl p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-red-300 mb-2">Error</h2>
+            <p className="text-sm sm:text-base text-red-200">{error}</p>
           </div>
         </div>
       </div>
@@ -126,23 +126,23 @@ const ProfilePage: React.FC = () => {
   if (!profile) return null
 
   const profileTabContent = (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Profile Header */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-purple-600 rounded-full flex items-center justify-center">
-              <UserIcon size={32} className="text-white" />
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-4 sm:space-y-0 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-purple-600 rounded-full flex items-center justify-center mx-auto sm:mx-0 flex-shrink-0">
+              <UserIcon size={24} className="sm:size-8 text-white" />
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white">
+            <div className="text-center sm:text-left sm:ml-6 md:ml-4 lg:ml-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
                 {profile.full_name || 'No name set'}
               </h2>
-              <div className="flex items-center text-gray-400 mt-1">
-                <Mail size={16} className="mr-2" />
-                <span>{profile.email}</span>
+              <div className="flex items-center justify-center sm:justify-start text-gray-400 mt-1">
+                <Mail size={14} className="sm:size-4 mr-2" />
+                <span className="text-sm sm:text-base break-all">{profile.email}</span>
               </div>
-              <div className="mt-2">
+              <div className="mt-2 flex justify-center sm:justify-start">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-900 text-purple-300">
                   {profile.role}
                 </span>
@@ -151,7 +151,7 @@ const ProfilePage: React.FC = () => {
           </div>
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-purple-600 text-white text-sm sm:text-base rounded-lg hover:bg-purple-700 transition-colors w-full sm:w-auto"
           >
             <Edit3 size={16} className="mr-2" />
             {isEditing ? 'Cancel' : 'Edit Profile'}
@@ -161,10 +161,10 @@ const ProfilePage: React.FC = () => {
 
       {/* Edit Form */}
       {isEditing && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h3 className="text-xl font-semibold text-white mb-6">Edit Profile</h3>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+          <h3 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6">Edit Profile</h3>
           <form onSubmit={handleUpdateName}>
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Full Name
               </label>
@@ -172,14 +172,14 @@ const ProfilePage: React.FC = () => {
                 type="text"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-3 py-2 sm:py-3 bg-gray-800 border border-gray-700 text-white text-sm sm:text-base rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Enter your full name"
               />
             </div>
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
               <button
                 type="submit"
-                className="flex items-center px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                className="flex items-center justify-center px-4 py-2 sm:px-6 sm:py-2 bg-purple-600 text-white text-sm sm:text-base rounded-lg hover:bg-purple-700 transition-colors w-full sm:w-auto"
               >
                 <Save size={16} className="mr-2" />
                 Save Changes
@@ -190,7 +190,7 @@ const ProfilePage: React.FC = () => {
                   setIsEditing(false)
                   setFormData({ full_name: profile.full_name || '' })
                 }}
-                className="px-6 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors"
+                className="px-4 py-2 sm:px-6 sm:py-2 border border-gray-600 text-gray-300 text-sm sm:text-base rounded-lg hover:bg-gray-800 transition-colors w-full sm:w-auto"
               >
                 Cancel
               </button>
@@ -202,10 +202,10 @@ const ProfilePage: React.FC = () => {
   )
 
   const securityTabContent = (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Change Password */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h3 className="text-xl font-semibold text-white mb-6">Change Password</h3>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6">
+        <h3 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6">Change Password</h3>
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -216,7 +216,7 @@ const ProfilePage: React.FC = () => {
                 type={showPasswords.new ? 'text' : 'password'}
                 value={passwordData.new_password}
                 onChange={(e) => setPasswordData({ ...passwordData, new_password: e.target.value })}
-                className="w-full px-3 py-2 pr-10 bg-gray-800 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-3 py-2 sm:py-3 pr-10 bg-gray-800 border border-gray-700 text-white text-sm sm:text-base rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Enter new password"
                 minLength={6}
                 aria-label="New password"
@@ -227,7 +227,7 @@ const ProfilePage: React.FC = () => {
                 onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
               >
-                {showPasswords.new ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPasswords.new ? <EyeOff size={18} className="sm:size-5" /> : <Eye size={18} className="sm:size-5" />}
               </button>
             </div>
           </div>
@@ -240,7 +240,7 @@ const ProfilePage: React.FC = () => {
                 type={showPasswords.confirm ? 'text' : 'password'}
                 value={passwordData.confirm_password}
                 onChange={(e) => setPasswordData({ ...passwordData, confirm_password: e.target.value })}
-                className="w-full px-3 py-2 pr-10 bg-gray-800 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-3 py-2 sm:py-3 pr-10 bg-gray-800 border border-gray-700 text-white text-sm sm:text-base rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Confirm new password"
                 minLength={6}
                 aria-label="Confirm new password"
@@ -251,13 +251,13 @@ const ProfilePage: React.FC = () => {
                 onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
               >
-                {showPasswords.confirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPasswords.confirm ? <EyeOff size={18} className="sm:size-5" /> : <Eye size={18} className="sm:size-5" />}
               </button>
             </div>
           </div>
           <button
             type="submit"
-            className="flex items-center px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="flex items-center justify-center px-4 py-2 sm:px-6 sm:py-2 bg-purple-600 text-white text-sm sm:text-base rounded-lg hover:bg-purple-700 transition-colors w-full sm:w-auto"
           >
             <Shield size={16} className="mr-2" />
             Change Password
@@ -266,18 +266,18 @@ const ProfilePage: React.FC = () => {
       </div>
 
       {/* Delete Account */}
-      <div className="bg-red-900 border border-red-700 rounded-xl p-6">
-        <h3 className="text-xl font-semibold text-red-300 mb-4">Danger Zone</h3>
-        <div className="flex items-center justify-between p-4 bg-red-800 rounded-lg">
-          <div>
-            <h4 className="text-red-200 font-medium">Delete Account</h4>
-            <p className="text-red-300 text-sm">
+      <div className="bg-red-900 border border-red-700 rounded-xl p-4 sm:p-6">
+        <h3 className="text-lg sm:text-xl font-semibold text-red-300 mb-4">Danger Zone</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 p-4 bg-red-800 rounded-lg">
+          <div className="text-center sm:text-left">
+            <h4 className="text-red-200 font-medium text-sm sm:text-base">Delete Account</h4>
+            <p className="text-red-300 text-xs sm:text-sm mt-1">
               Permanently delete your account, profile, and all tracked job applications
             </p>
           </div>
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="flex items-center justify-center px-3 py-2 sm:px-4 sm:py-2 bg-red-600 text-white text-sm sm:text-base rounded-lg hover:bg-red-700 transition-colors w-full sm:w-auto"
           >
             <Trash2 size={16} className="mr-2" />
             Delete Account
@@ -287,28 +287,28 @@ const ProfilePage: React.FC = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold text-white mb-4">Confirm Account Deletion</h3>
-            <p className="text-gray-300 mb-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6 max-w-md w-full">
+            <h3 className="text-lg sm:text-xl font-semibold text-white mb-4">Confirm Account Deletion</h3>
+            <p className="text-gray-300 text-sm sm:text-base mb-4 sm:mb-6">
               Are you sure you want to delete your account? This action cannot be undone and will permanently delete:
             </p>
-            <ul className="text-gray-300 mb-6 list-disc list-inside space-y-1">
+            <ul className="text-gray-300 text-sm sm:text-base mb-4 sm:mb-6 list-disc list-inside space-y-1">
               <li>Your profile information</li>
               <li>All tracked job applications</li>
               <li>Your account credentials</li>
               <li>Any other associated data</li>
             </ul>
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
               <button
                 onClick={handleDeleteAccount}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="flex-1 px-4 py-2 bg-red-600 text-white text-sm sm:text-base rounded-lg hover:bg-red-700 transition-colors"
               >
                 Yes, Delete Account
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors"
+                className="flex-1 px-4 py-2 border border-gray-600 text-gray-300 text-sm sm:text-base rounded-lg hover:bg-gray-800 transition-colors"
               >
                 Cancel
               </button>
@@ -321,24 +321,24 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="space-y-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="space-y-6 sm:space-y-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               <Link
                 href="/"
                 className="flex items-center justify-center w-10 h-10 bg-gray-800 bg-opacity-50 hover:bg-opacity-70 rounded-full transition-all duration-200 text-gray-400 hover:text-white"
                 title="Back to Jobs"
               >
-                <ArrowLeft size={20} />
+                <ArrowLeft size={18} className="sm:size-5" />
               </Link>
-              <h1 className="text-3xl font-bold text-white">Profile Settings</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">Profile Settings</h1>
             </div>
           </div>
 
           {/* Tab Navigation */}
           <div className="border-b border-gray-800">
-            <nav className="flex space-x-8">
+            <nav className="flex space-x-6 sm:space-x-8">
               <button
                 onClick={() => setActiveTab('profile')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${

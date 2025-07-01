@@ -3,11 +3,10 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BarChart3, Plus, Menu, X, User, LogOut, Settings } from 'lucide-react';
+import { Home, BarChart3, Plus, Menu, X, User, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from './AuthModal';
-import NotificationBadge from './NotificationBadge';
 
 interface HeaderProps {
   onPostJobClick?: () => void
@@ -58,19 +57,17 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
             </Link>
 
             {!loading && isAuthenticated && (
-              <NotificationBadge>
-                <Link
-                  href="/dashboard"
-                  className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                    pathname === '/dashboard' 
-                      ? 'bg-purple-900 text-purple-300' 
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  <BarChart3 size={20} className="mr-2" />
-                  Dashboard
-                </Link>
-              </NotificationBadge>
+              <Link
+                href="/dashboard"
+                className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                  pathname === '/dashboard' 
+                    ? 'bg-purple-900 text-purple-300' 
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                <BarChart3 size={20} className="mr-2" />
+                Dashboard
+              </Link>
             )}
 
             <button
@@ -80,20 +77,6 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               <Plus size={20} className="mr-2" />
               Post Job
             </button>
-
-            {!loading && isAuthenticated && (
-              <Link
-                href="/profile"
-                className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                  pathname === '/profile' 
-                    ? 'bg-purple-900 text-purple-300' 
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                <Settings size={20} className="mr-2" />
-                Profile
-              </Link>
-            )}
           </nav>
 
           {/* Auth Section */}
@@ -108,13 +91,26 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                     {user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0]}
                   </span>
                 </div>
-                <button
-                  onClick={handleSignOut}
-                  className="p-2 text-gray-400 hover:text-white rounded-lg transition-colors"
-                  title="Sign Out"
-                >
-                  <LogOut size={20} />
-                </button>
+                <div className="hidden md:flex items-center space-x-2">
+                  <Link
+                    href="/profile"
+                    className={`p-2 rounded-lg transition-colors ${
+                      pathname === '/profile' 
+                        ? 'bg-purple-900 text-purple-300' 
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                    title="Profile"
+                  >
+                    <User size={20} />
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="p-2 text-gray-400 hover:text-white rounded-lg transition-colors"
+                    title="Sign Out"
+                  >
+                    <LogOut size={20} />
+                  </button>
+                </div>
               </div>
             ) : (
               <button
@@ -139,14 +135,14 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-gray-800 bg-gray-900">
-          <nav className="px-4 py-4 space-y-2">
+          <nav className="py-4 space-y-2">
             <Link
               href="/"
               onClick={toggleMobileMenu}
-              className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors ${
+              className={`flex items-center w-full px-4 py-2 transition-colors ${
                 pathname === '/' 
                   ? 'bg-purple-900 text-purple-300' 
-                  : 'text-gray-300 hover:text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-gray-800'
               }`}
             >
               <Home size={20} className="mr-3" />
@@ -154,20 +150,18 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
             </Link>
 
             {!loading && isAuthenticated && (
-              <NotificationBadge>
-                <Link
-                  href="/dashboard"
-                  onClick={toggleMobileMenu}
-                  className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors ${
-                    pathname === '/dashboard' 
-                      ? 'bg-purple-900 text-purple-300' 
-                      : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  <BarChart3 size={20} className="mr-3" />
-                  Dashboard
-                </Link>
-              </NotificationBadge>
+              <Link
+                href="/dashboard"
+                onClick={toggleMobileMenu}
+                className={`flex items-center w-full px-4 py-2 transition-colors ${
+                  pathname === '/dashboard' 
+                    ? 'bg-purple-900 text-purple-300' 
+                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                }`}
+              >
+                <BarChart3 size={20} className="mr-3" />
+                Dashboard
+              </Link>
             )}
 
             <button
@@ -175,7 +169,7 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                 onPostJobClick?.();
                 toggleMobileMenu();
               }}
-              className="flex items-center w-full px-3 py-2 text-gray-300 rounded-lg transition-colors hover:text-white"
+              className="flex items-center w-full px-4 py-2 text-gray-300 transition-colors hover:text-white hover:bg-gray-800"
             >
               <Plus size={20} className="mr-3" />
               Post Job
@@ -185,26 +179,26 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               <Link
                 href="/profile"
                 onClick={toggleMobileMenu}
-                className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors ${
+                className={`flex items-center w-full px-4 py-2 transition-colors ${
                   pathname === '/profile' 
                     ? 'bg-purple-900 text-purple-300' 
-                    : 'text-gray-300 hover:text-white'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
                 }`}
               >
-                <Settings size={20} className="mr-3" />
+                <User size={20} className="mr-3" />
                 Profile
               </Link>
             )}
 
             {loading ? (
-              <div className="w-full h-12 bg-gray-800 rounded-lg animate-pulse"></div>
+              <div className="mx-4 h-12 bg-gray-800 rounded-lg animate-pulse"></div>
             ) : !isAuthenticated ? (
               <button
                 onClick={() => {
                   setAuthModalOpen(true);
                   toggleMobileMenu();
                 }}
-                className="flex items-center w-full px-3 py-2 text-gray-300 rounded-lg transition-colors hover:text-white"
+                className="flex items-center w-full px-4 py-2 text-gray-300 transition-colors hover:text-white hover:bg-gray-800"
               >
                 <User size={20} className="mr-3" />
                 Sign In
@@ -215,7 +209,7 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                   handleSignOut();
                   toggleMobileMenu();
                 }}
-                className="flex items-center w-full px-3 py-2 text-gray-300 rounded-lg transition-colors hover:text-white"
+                className="flex items-center w-full px-4 py-2 text-gray-300 transition-colors hover:text-white hover:bg-gray-800"
               >
                 <LogOut size={20} className="mr-3" />
                 Sign Out
