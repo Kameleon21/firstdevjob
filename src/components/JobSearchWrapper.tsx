@@ -107,29 +107,65 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
           </div>
         )}
 
+        {/* Job Count and Filter Status */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <h2 className="text-2xl font-semibold text-white">
+                {hasActiveFilters ? 'Search Results' : 'Latest Jobs'}
+              </h2>
+              <span className="px-3 py-1 bg-purple-900 text-purple-300 rounded-full text-sm">
+                {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            
+            {hasActiveFilters && (
+              <button
+                onClick={handleClearFilters}
+                className="text-purple-400 hover:text-purple-300 text-sm font-medium transition-colors"
+              >
+                Clear all filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Jobs Grid */}
         {filteredJobs.length === 0 ? (
           <div className="text-center py-16">
             <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-xl p-12 max-w-md mx-auto">
               <div className="mb-6">
                 <svg className="w-16 h-16 text-purple-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0H8m8 0v2a2 2 0 002 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2v-8a2 2 0 012-2V6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
               <h3 className="text-2xl font-semibold text-white mb-4">
-                {hasActiveFilters ? 'No Results Found' : 'No Jobs Found'}
+                {hasActiveFilters ? 'No jobs found' : 'No jobs available'}
               </h3>
-              <p className="text-gray-400 text-base">
+              <p className="text-gray-400 text-base mb-6">
                 {hasActiveFilters 
-                  ? 'Try adjusting your search criteria or clearing the filters.'
-                  : 'There are currently no job listings available. Please check back later!'
+                  ? 'Try adjusting your search terms or selected tags to find more opportunities.'
+                  : 'There are currently no approved jobs available. Check back later for new opportunities!'
                 }
               </p>
+              {hasActiveFilters && (
+                <button
+                  onClick={handleClearFilters}
+                  className="inline-flex px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
             {filteredJobs.map((job) => (
-              <JobCard key={job.id} job={job} searchQuery={debouncedSearchQuery} />
+              <JobCard 
+                key={job.id} 
+                job={job} 
+                searchQuery={debouncedSearchQuery}
+              />
             ))}
           </div>
         )}

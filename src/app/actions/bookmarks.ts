@@ -139,36 +139,66 @@ export async function getUserBookmarks() {
   }
 
   try {
-    const { data, error } = await supabase
+    // First, get the tracked applications with basic job info
+    const { data: bookmarks, error: bookmarksError } = await supabase
       .from('tracked_applications')
       .select(`
         id,
         status,
         notes,
         job_id,
-        job (
+        job:job_id (
           id,
           title,
           company,
           location,
           url,
-          created_at,
-          job_tags (
-            tags (
-              id,
-              name
-            )
-          )
+          created_at
         )
       `)
       .eq('user_id', user.id)
       .order('id', { ascending: false })
 
-    if (error) throw error
+    if (bookmarksError) throw bookmarksError
 
-    // Transform the data to flatten the tags structure
+    if (!bookmarks || bookmarks.length === 0) {
+      return []
+    }
+
+    // Get job IDs for tag lookup
+    const jobIds = bookmarks.map(b => b.job_id).filter(Boolean)
+    
+    // Separately fetch tags for all jobs in one query
+    const { data: jobTags, error: tagsError } = await supabase
+      .from('job_tags')
+      .select(`
+        job_id,
+        tags:tag_id (
+          id,
+          name
+        )
+      `)
+      .in('job_id', jobIds)
+
+    if (tagsError) {
+      console.error('Error fetching job tags:', tagsError)
+      // Continue without tags rather than failing completely
+    }
+
+    // Create a map of job ID to tags for efficient lookup
+    const tagsMap = new Map()
+    jobTags?.forEach(jt => {
+      if (!tagsMap.has(jt.job_id)) {
+        tagsMap.set(jt.job_id, [])
+      }
+      if (jt.tags) {
+        tagsMap.get(jt.job_id).push(jt.tags)
+      }
+    })
+
+    // Transform the data to include tags
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bookmarksWithJobs = data?.map((bookmark: any) => ({
+    const bookmarksWithJobs = bookmarks.map((bookmark: any) => ({
       id: bookmark.id,
       status: bookmark.status,
       notes: bookmark.notes,
@@ -179,9 +209,9 @@ export async function getUserBookmarks() {
         location: bookmark.job.location,
         url: bookmark.job.url,
         created_at: bookmark.job.created_at,
-        tags: bookmark.job.job_tags?.map((jt: { tags: { id: number; name: string } }) => jt.tags).filter(Boolean) || []
+        tags: tagsMap.get(bookmark.job_id) || []
       }
-    })) || []
+    }))
 
     return bookmarksWithJobs
   } catch (error) {

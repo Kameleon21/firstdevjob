@@ -49,7 +49,10 @@ export default function PageWrapper({ initialJobs, allTags }: PageWrapperProps) 
           onPostJobClick={handleOpenPostJobModal}
         />
         <div className="mt-16">
-          <JobSearchWrapper initialJobs={initialJobs} allTags={allTags} />
+          <JobSearchWrapper 
+            initialJobs={initialJobs} 
+            allTags={allTags} 
+          />
         </div>
       </div>
 
