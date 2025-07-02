@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
-import { mockSupabaseClient, resetMockDatabase, createMockJob } from '../mocks/supabase'
+import { mockSupabaseClient, resetMockDatabase } from '../mocks/supabase'
 
 // Mock Next.js revalidation
 const mockRevalidatePath = jest.fn()
@@ -7,9 +7,9 @@ jest.mock('next/cache', () => ({
   revalidatePath: mockRevalidatePath,
 }))
 
-// Mock the Supabase server client
-jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn(() => Promise.resolve(mockSupabaseClient)),
+// Mock the Supabase service client (this is what postJob actually uses)
+jest.mock('@/lib/supabase/service', () => ({
+  createServiceClient: jest.fn(() => mockSupabaseClient),
 }))
 
 // Import after mocking
@@ -27,65 +27,93 @@ describe('Job Actions', () => {
       company: 'TechCorp',
       location: 'Remote',
       url: 'https://example.com/job',
-      selectedTags: ['react', 'typescript']
+      selectedTags: ['React', 'TypeScript']
     }
 
     it('should successfully create a new job posting', async () => {
-      const mockJob = createMockJob({
-        title: 'Frontend Developer',
-        company: 'TechCorp',
-        location: 'Remote',
-        apply_url: 'https://example.com/job',
-        is_approved: false
-      })
-
-      // Mock successful insert
-      mockSupabaseClient.from('jobs').insert.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
-            data: mockJob,
-            error: null
-          })
-        })
+      // Mock successful job insertion
+      const mockJobResponse = { id: 123 }
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'job') {
+          return {
+            insert: jest.fn().mockReturnValue({
+              select: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({
+                  data: mockJobResponse,
+                  error: null
+                })
+              })
+            })
+          }
+        }
+        if (table === 'tags') {
+          return {
+            select: jest.fn().mockReturnValue({
+              in: jest.fn().mockResolvedValue({
+                data: [
+                  { id: 1, name: 'React' },
+                  { id: 2, name: 'TypeScript' }
+                ],
+                error: null
+              })
+            })
+          }
+        }
+        if (table === 'job_tags') {
+          return {
+            insert: jest.fn().mockResolvedValue({
+              data: null,
+              error: null
+            })
+          }
+        }
+        return {
+          insert: jest.fn().mockResolvedValue({ data: null, error: null }),
+          select: jest.fn().mockResolvedValue({ data: [], error: null })
+        }
       })
 
       const result = await postJob(validJobData)
 
       expect(result.success).toBe(true)
-      expect(result.message).toContain('submitted successfully')
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('jobs')
+      expect(result.message).toContain('Thank you for your submission')
+      expect(mockRevalidatePath).toHaveBeenCalledWith('/')
     })
 
     it('should handle database insertion errors', async () => {
       // Mock database error
-      mockSupabaseClient.from('jobs').insert.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
-            data: null,
-            error: { message: 'Database error' }
-          })
-        })
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'job') {
+          return {
+            insert: jest.fn().mockReturnValue({
+              select: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({
+                  data: null,
+                  error: { message: 'Database connection failed' }
+                })
+              })
+            })
+          }
+        }
+        return {
+          insert: jest.fn().mockResolvedValue({ data: null, error: null }),
+          select: jest.fn().mockResolvedValue({ data: [], error: null })
+        }
       })
 
-      const result = await postJob(validJobData)
-
-      expect(result.success).toBe(false)
-      expect(result.message).toContain('error')
+      await expect(postJob(validJobData)).rejects.toThrow('Database error: Database connection failed')
     })
 
     it('should validate required fields', async () => {
       const invalidJobData = {
-        title: '',
+        title: '', // Empty title
         company: 'TechCorp',
         location: 'Remote',
         url: 'https://example.com/job',
         selectedTags: []
       }
 
-      const result = await postJob(invalidJobData)
-
-      expect(result.success).toBe(false)
-      expect(result.message).toContain('title')
+      await expect(postJob(invalidJobData)).rejects.toThrow('All fields are required')
     })
 
     it('should validate URL format', async () => {
@@ -94,66 +122,89 @@ describe('Job Actions', () => {
         url: 'not-a-valid-url'
       }
 
-      const result = await postJob(invalidJobData)
-
-      expect(result.success).toBe(false)
-      expect(result.message).toContain('URL')
+      await expect(postJob(invalidJobData)).rejects.toThrow('Please enter a valid URL')
     })
 
-    it('should handle tags correctly', async () => {
-      const mockJob = createMockJob({
-        title: 'Backend Developer',
-        company: 'DataCorp',
-        location: 'New York',
-        apply_url: 'https://example.com/backend-job'
+    it('should handle job posting without tags', async () => {
+      const mockJobResponse = { id: 456 }
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'job') {
+          return {
+            insert: jest.fn().mockReturnValue({
+              select: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({
+                  data: mockJobResponse,
+                  error: null
+                })
+              })
+            })
+          }
+        }
+        return {
+          insert: jest.fn().mockResolvedValue({ data: null, error: null }),
+          select: jest.fn().mockResolvedValue({ data: [], error: null })
+        }
       })
 
-      mockSupabaseClient.from('jobs').insert.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
-            data: mockJob,
-            error: null
-          })
-        })
-      })
-
-      const jobDataWithTags = {
+      const jobDataWithoutTags = {
         ...validJobData,
-        title: 'Backend Developer',
-        company: 'DataCorp',
-        location: 'New York',
-        url: 'https://example.com/backend-job',
-        selectedTags: ['node', 'mongodb', 'aws']
+        selectedTags: []
       }
 
-      const result = await postJob(jobDataWithTags)
+      const result = await postJob(jobDataWithoutTags)
 
       expect(result.success).toBe(true)
-      // Verify tags are handled properly in the job creation
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('jobs')
+      expect(result.message).toContain('Thank you for your submission')
     })
 
-    it('should set job as unapproved by default', async () => {
-      const mockJob = createMockJob({
-        title: 'Designer',
-        company: 'DesignStudio',
-        is_approved: false
-      })
-
-      mockSupabaseClient.from('jobs').insert.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
-            data: mockJob,
-            error: null
-          })
-        })
+    it('should handle tag relationships when tags are provided', async () => {
+      const mockJobResponse = { id: 789 }
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'job') {
+          return {
+            insert: jest.fn().mockReturnValue({
+              select: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({
+                  data: mockJobResponse,
+                  error: null
+                })
+              })
+            })
+          }
+        }
+        if (table === 'tags') {
+          return {
+            select: jest.fn().mockReturnValue({
+              in: jest.fn().mockResolvedValue({
+                data: [
+                  { id: 1, name: 'React' },
+                  { id: 2, name: 'TypeScript' }
+                ],
+                error: null
+              })
+            })
+          }
+        }
+        if (table === 'job_tags') {
+          return {
+            insert: jest.fn().mockResolvedValue({
+              data: null,
+              error: null
+            })
+          }
+        }
+        return {
+          insert: jest.fn().mockResolvedValue({ data: null, error: null }),
+          select: jest.fn().mockResolvedValue({ data: [], error: null })
+        }
       })
 
       const result = await postJob(validJobData)
 
       expect(result.success).toBe(true)
-      // Verify the job is created with is_approved: false
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('jobs')
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('job')
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('tags')
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('job_tags')
     })
   })
 }) 

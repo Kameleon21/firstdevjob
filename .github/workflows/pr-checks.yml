@@ -1,0 +1,212 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Cancel previous runs if new commits are pushed
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # Quality Gate 1: Code Quality
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run ESLint
+        run: npm run lint -- --format=@microsoft/eslint-formatter-sarif --output-file=eslint-results.sarif
+        continue-on-error: true
+      
+      - name: Upload ESLint results to GitHub
+        if: always()
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: eslint-results.sarif
+          wait-for-processing: true
+
+  # Quality Gate 2: Type Safety
+  type-check:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Type check
+        run: npx tsc --noEmit
+
+  # Quality Gate 3: Unit Tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests with coverage
+        run: npm test -- --coverage --watchAll=false --testResultsProcessor=jest-sonar-reporter
+      
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Jest Tests
+          path: test-results.xml
+          reporter: jest-junit
+
+  # Quality Gate 4: Build Verification
+  build-check:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  # Quality Gate 5: Bundle Analysis
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build and analyze bundle
+        run: npm run build
+        env:
+          ANALYZE: true
+          NEXT_TELEMETRY_DISABLED: 1
+      
+      - name: Upload bundle analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis
+          path: .next/analyze/
+
+  # Summary Job - All checks must pass
+  all-checks-complete:
+    name: All Checks Complete
+    runs-on: ubuntu-latest
+    needs: [code-quality, type-check, unit-tests, build-check, bundle-analysis]
+    if: always() && github.event.pull_request.draft == false
+    
+    steps:
+      - name: Check all jobs status
+        run: |
+          if [[ "${{ needs.code-quality.result }}" == "success" && 
+                "${{ needs.type-check.result }}" == "success" && 
+                "${{ needs.unit-tests.result }}" == "success" && 
+                "${{ needs.build-check.result }}" == "success" && 
+                "${{ needs.bundle-analysis.result }}" == "success" ]]; then
+            echo "✅ All quality gates passed!"
+            echo "🚀 This PR is ready for review and merge."
+          else
+            echo "❌ Some quality gates failed."
+            echo "Please fix the issues before merging."
+            exit 1
+          fi
+      
+      - name: Comment PR with results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = {
+              codeQuality: '${{ needs.code-quality.result }}',
+              typeCheck: '${{ needs.type-check.result }}',
+              unitTests: '${{ needs.unit-tests.result }}',
+              buildCheck: '${{ needs.build-check.result }}',
+              bundleAnalysis: '${{ needs.bundle-analysis.result }}'
+            };
+            
+            const allPassed = Object.values(results).every(result => result === 'success');
+            const emoji = allPassed ? '✅' : '❌';
+            const status = allPassed ? 'All checks passed!' : 'Some checks failed.';
+            
+            const body = `## ${emoji} Quality Gate Results
+            
+            | Check | Status |
+            |-------|--------|
+            | Code Quality | ${results.codeQuality === 'success' ? '✅' : '❌'} |
+            | Type Safety | ${results.typeCheck === 'success' ? '✅' : '❌'} |
+            | Unit Tests | ${results.unitTests === 'success' ? '✅' : '❌'} |
+            | Build Check | ${results.buildCheck === 'success' ? '✅' : '❌'} |
+            | Bundle Analysis | ${results.bundleAnalysis === 'success' ? '✅' : '❌'} |
+            
+            **${status}**
+            
+            ${allPassed ? '🚀 This PR is ready for review!' : '🔧 Please fix the failing checks before merging.'}`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            }); 

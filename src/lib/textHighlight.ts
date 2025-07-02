@@ -15,6 +15,11 @@ export function highlightText(
   highlightBackgroundColor = 'rgba(0, 0, 0, 0.1)', // Accessible default background color
   highlightTextColor = '#000000' // Accessible default text color
 ): React.ReactNode {
+  // Handle null/undefined inputs gracefully
+  if (!text || !searchQuery || typeof text !== 'string' || typeof searchQuery !== 'string') {
+    return text || ''
+  }
+
   if (!searchQuery.trim() || !text) {
     return text
   }

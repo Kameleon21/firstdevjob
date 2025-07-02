@@ -1,57 +1,57 @@
 import { jest } from '@jest/globals'
 
-// Mock data types
-export type MockUser = {
+// Mock data interfaces
+export interface MockUser {
   id: string
   email: string
-  role?: string
+  user_metadata?: {
+    name?: string
+    full_name?: string
+  }
+  role?: 'user' | 'moderator' | 'admin'
 }
 
-export type MockJob = {
+export interface MockJob {
   id: number
   title: string
   company: string
   location: string
-  url: string
-  status: 'pending' | 'approved' | 'rejected'
-  created_at: string
+  url?: string
+  apply_url?: string
+  status?: 'pending' | 'approved' | 'rejected'
+  is_approved?: boolean
+  created_at?: string
   tags?: Array<{ id: number; name: string }>
 }
 
-export type MockBookmark = {
+export interface MockBookmark {
   id: number
   user_id: string
   job_id: number
-  status: 'saved' | 'applied' | 'interviewing' | 'offer' | 'rejected' | 'accepted'
-  notes?: string
-  job?: MockJob
+  created_at: string
 }
 
 // Mock database state
 let mockUsers: MockUser[] = []
 let mockJobs: MockJob[] = []
 let mockBookmarks: MockBookmark[] = []
-let mockTags: Array<{ id: number; name: string }> = []
-let mockProfiles: Array<{ id: string; full_name?: string; role: string }> = []
+let mockTags: Array<{ id: number; name: string }> = [
+  { id: 1, name: 'React' },
+  { id: 2, name: 'TypeScript' },
+  { id: 3, name: 'Node.js' },
+  { id: 4, name: 'Python' },
+  { id: 5, name: 'JavaScript' }
+]
 
-// Helper functions for test setup
+// Helper functions to manage mock data
 export const resetMockDatabase = () => {
   mockUsers = []
   mockJobs = []
   mockBookmarks = []
-  mockTags = []
-  mockProfiles = []
 }
 
-export const setMockUser = (user: MockUser) => {
-  mockUsers = [user]
-  // Also add to profiles if not exists
-  if (!mockProfiles.find(p => p.id === user.id)) {
-    mockProfiles.push({
-      id: user.id,
-      role: user.role || 'user'
-    })
-  }
+export const setMockUsers = (users: MockUser[]) => {
+  mockUsers = users
 }
 
 export const setMockJobs = (jobs: MockJob[]) => {
@@ -62,116 +62,100 @@ export const setMockBookmarks = (bookmarks: MockBookmark[]) => {
   mockBookmarks = bookmarks
 }
 
-export const setMockTags = (tags: Array<{ id: number; name: string }>) => {
-  mockTags = tags
+export const addMockUser = (user: MockUser) => {
+  mockUsers.push(user)
 }
 
-// Mock Supabase query builder
+export const addMockJob = (job: MockJob) => {
+  const newJob = { ...job, id: job.id || Date.now() }
+  mockJobs.push(newJob)
+  return newJob
+}
+
+// Factory functions for creating mock data
+export const createMockUser = (overrides: Partial<MockUser> = {}): MockUser => ({
+  id: `user-${Date.now()}`,
+  email: 'test@example.com',
+  role: 'user',
+  ...overrides
+})
+
+export const createMockJob = (overrides: Partial<MockJob> = {}): MockJob => ({
+  id: Date.now(),
+  title: 'Test Job',
+  company: 'Test Company',
+  location: 'Remote',
+  url: 'https://example.com/job',
+  status: 'pending',
+  is_approved: false,
+  created_at: new Date().toISOString(),
+  ...overrides
+})
+
+export const createMockBookmark = (overrides: Partial<MockBookmark> = {}): MockBookmark => ({
+  id: Date.now(),
+  user_id: 'test-user',
+  job_id: 1,
+  created_at: new Date().toISOString(),
+  ...overrides
+})
+
+// Create a mock query builder that supports chaining
 const createMockQueryBuilder = (table: string) => {
   const queryBuilder = {
-    select: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    delete: jest.fn().mockReturnThis(),
-    upsert: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    neq: jest.fn().mockReturnThis(),
-    in: jest.fn().mockReturnThis(),
-    like: jest.fn().mockReturnThis(),
-    ilike: jest.fn().mockReturnThis(),
-    order: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    single: jest.fn().mockReturnThis(),
-    maybeSingle: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnValue(queryBuilder),
+    select: jest.fn().mockReturnValue(queryBuilder),
+    single: jest.fn().mockResolvedValue({ data: null, error: null }),
+    update: jest.fn().mockReturnValue(queryBuilder),
+    delete: jest.fn().mockReturnValue(queryBuilder),
+    eq: jest.fn().mockReturnValue(queryBuilder),
+    in: jest.fn().mockReturnValue(queryBuilder),
+    gte: jest.fn().mockReturnValue(queryBuilder),
+    lte: jest.fn().mockReturnValue(queryBuilder),
+    order: jest.fn().mockReturnValue(queryBuilder),
+    limit: jest.fn().mockReturnValue(queryBuilder),
+    range: jest.fn().mockReturnValue(queryBuilder),
+    // Add promise-like behavior for queries without explicit resolution
+    then: jest.fn(),
+    catch: jest.fn(),
   }
 
-  // Mock implementations based on table
-  switch (table) {
-    case 'jobs':
-      queryBuilder.select.mockImplementation((columns?: string) => {
-        const mockResponse = {
-          data: columns?.includes('tags') 
-            ? mockJobs.map(job => ({
-                ...job,
-                job_tags: job.tags?.map(tag => ({ tags: tag })) || []
-              }))
-            : mockJobs,
-          error: null
-        }
-        return Promise.resolve(mockResponse)
-      })
-      
-      queryBuilder.insert.mockImplementation((data: any) => {
-        const newJob: MockJob = {
-          id: mockJobs.length + 1,
-          created_at: new Date().toISOString(),
-          status: 'pending',
-          ...data
-        }
-        mockJobs.push(newJob)
-        return Promise.resolve({ data: [newJob], error: null })
-      })
-      
-      queryBuilder.update.mockImplementation((data: any) => {
-        // Update logic would go here
-        return Promise.resolve({ data: null, error: null })
-      })
-      break
+  // Setup default behaviors based on table
+  if (table === 'job') {
+    queryBuilder.insert.mockImplementation((data) => {
+      const newJob = { id: Date.now(), ...data }
+      return {
+        ...queryBuilder,
+        select: jest.fn().mockReturnValue({
+          ...queryBuilder,
+          single: jest.fn().mockResolvedValue({
+            data: newJob,
+            error: null
+          })
+        })
+      }
+    })
+  }
 
-    case 'tracked_applications':
-      queryBuilder.select.mockImplementation(() => {
-        return Promise.resolve({ data: mockBookmarks, error: null })
+  if (table === 'tags') {
+    queryBuilder.select.mockResolvedValue({
+      data: mockTags,
+      error: null
+    })
+    queryBuilder.in.mockImplementation((column, values) => ({
+      ...queryBuilder,
+      then: (resolve) => resolve({
+        data: mockTags.filter(tag => values.includes(tag.name)),
+        error: null
       })
-      
-      queryBuilder.insert.mockImplementation((data: any) => {
-        const newBookmark: MockBookmark = {
-          id: mockBookmarks.length + 1,
-          ...data
-        }
-        mockBookmarks.push(newBookmark)
-        return Promise.resolve({ data: [newBookmark], error: null })
-      })
-      
-      queryBuilder.update.mockImplementation((data: any) => {
-        return Promise.resolve({ data: null, error: null })
-      })
-      
-      queryBuilder.delete.mockImplementation(() => {
-        return Promise.resolve({ data: null, error: null })
-      })
-      break
+    }))
+  }
 
-    case 'tags':
-      queryBuilder.select.mockImplementation(() => {
-        return Promise.resolve({ data: mockTags, error: null })
-      })
-      
-      queryBuilder.upsert.mockImplementation((data: any) => {
-        const tags = Array.isArray(data) ? data : [data]
-        const newTags = tags.map((tag: any, index: number) => ({
-          id: mockTags.length + index + 1,
-          ...tag
-        }))
-        mockTags.push(...newTags)
-        return { select: () => Promise.resolve({ data: newTags, error: null }) }
-      })
-      break
-
-    case 'profiles':
-      queryBuilder.select.mockImplementation(() => {
-        return Promise.resolve({ data: mockProfiles, error: null })
-      })
-      
-      queryBuilder.update.mockImplementation((data: any) => {
-        return Promise.resolve({ data: null, error: null })
-      })
-      break
-
-    default:
-      queryBuilder.select.mockResolvedValue({ data: [], error: null })
-      queryBuilder.insert.mockResolvedValue({ data: [], error: null })
-      queryBuilder.update.mockResolvedValue({ data: null, error: null })
-      queryBuilder.delete.mockResolvedValue({ data: null, error: null })
+  if (table === 'job_tags') {
+    queryBuilder.insert.mockResolvedValue({
+      data: null,
+      error: null
+    })
   }
 
   return queryBuilder
@@ -203,26 +187,21 @@ export const mockSupabaseAuth = {
 }
 
 // Mock Supabase client
-export const createMockSupabaseClient = () => ({
+export const mockSupabaseClient = {
   auth: mockSupabaseAuth,
   from: jest.fn().mockImplementation((table: string) => createMockQueryBuilder(table)),
-  rpc: jest.fn().mockResolvedValue({ data: null, error: null }),
-})
+  rpc: jest.fn().mockResolvedValue({ data: [], error: null }),
+  storage: {
+    from: jest.fn().mockReturnValue({
+      upload: jest.fn().mockResolvedValue({ data: null, error: null }),
+      download: jest.fn().mockResolvedValue({ data: null, error: null }),
+      remove: jest.fn().mockResolvedValue({ data: null, error: null }),
+    })
+  }
+}
 
-// Main mock for Supabase modules
-export const mockSupabaseClient = createMockSupabaseClient()
-
-// Mock the Supabase client creation
-jest.mock('@/lib/supabase/client', () => ({
-  createClient: jest.fn(() => mockSupabaseClient)
-}))
-
-jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn(() => mockSupabaseClient)
-}))
-
-jest.mock('@/lib/supabase/service', () => ({
-  createServiceClient: jest.fn(() => mockSupabaseClient)
-}))
-
-export { mockSupabaseClient } 
+// Export mock functions for easy access in tests
+export const getMockJobs = () => [...mockJobs]
+export const getMockUsers = () => [...mockUsers]
+export const getMockBookmarks = () => [...mockBookmarks]
+export const getMockTags = () => [...mockTags] 

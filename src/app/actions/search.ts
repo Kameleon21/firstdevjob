@@ -59,7 +59,10 @@ export async function searchJobs(searchQuery: string = '', selectedTags: string[
       location: job.location,
       url: job.url,
       status: job.status,
-      tags: job.job_tags?.map((jt: { tags: { id: number; name: string } }) => jt.tags).filter(Boolean) || []
+      tags: job.job_tags?.filter((jt: { tags: { id: number; name: string } | null } | null) => jt && jt.tags)
+        .map((jt: { tags: { id: number; name: string } | null }) => jt.tags)
+        .filter((tag: { id: number; name: string } | null): tag is { id: number; name: string } => 
+          tag !== null && tag !== undefined && tag.name !== null && tag.name !== undefined) || []
     })) || [];
 
     // Filter by selected tags if any are provided
@@ -90,7 +93,7 @@ export async function getAllTags(): Promise<string[]> {
       return [];
     }
 
-    return data?.map(tag => tag.name) || [];
+    return data?.map(tag => tag.name).filter(name => name && name.trim() !== '') || [];
   } catch (error) {
     console.error('Error fetching tags:', error);
     return [];
