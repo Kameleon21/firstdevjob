@@ -60,7 +60,7 @@ export async function toggleBookmark(jobId: number) {
     console.error('Error toggling bookmark:', error)
     console.error('Error details:', {
       jobId,
-      userId: user.id,
+      userId: user?.id || 'unknown',
       errorMessage: error instanceof Error ? error.message : 'Unknown error'
     })
     throw new Error(`Failed to update bookmark: ${error instanceof Error ? error.message : 'Unknown error'}`)
