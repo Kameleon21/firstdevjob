@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getUserBookmarks } from '@/app/actions/bookmarks'
 import { createClient } from '@/lib/supabase/client'
-import { redirect } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import DashboardJobCard from '@/components/DashboardJobCard'
 import { checkUserRole, getPendingJobs } from '@/app/actions/admin'
@@ -49,6 +49,7 @@ interface PendingJob {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [userRole, setUserRole] = useState<UserRole>({ isAdmin: false, isModerator: false })
@@ -65,7 +66,7 @@ export default function DashboardPage() {
         const { data: { user }, error: authError } = await supabase.auth.getUser()
         
         if (authError || !user) {
-          redirect('/auth/login?message=Please sign in to view your dashboard')
+          router.push('/auth/login?message=Please sign in to view your dashboard')
           return
         }
 
