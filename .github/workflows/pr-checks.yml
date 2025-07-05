@@ -10,6 +10,10 @@ concurrency:
   group: pr-checks-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   # Quality Gate 1: Code Quality
   code-quality:
@@ -33,15 +37,7 @@ jobs:
         run: npm ci
       
       - name: Run ESLint
-        run: npm run lint -- --format=@microsoft/eslint-formatter-sarif --output-file=eslint-results.sarif
-        continue-on-error: true
-      
-      - name: Upload ESLint results to GitHub
-        if: always()
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: eslint-results.sarif
-          wait-for-processing: true
+        run: npm run lint
 
   # Quality Gate 2: Type Safety
   type-check:
@@ -85,15 +81,7 @@ jobs:
         run: npm ci
       
       - name: Run tests with coverage
-        run: npm test -- --coverage --watchAll=false --testResultsProcessor=jest-sonar-reporter
-      
-      - name: Test Report
-        uses: dorny/test-reporter@v1
-        if: success() || failure()
-        with:
-          name: Jest Tests
-          path: test-results.xml
-          reporter: jest-junit
+        run: npm test -- --coverage --watchAll=false
 
   # Quality Gate 4: Build Verification
   build-check:
@@ -118,6 +106,8 @@ jobs:
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
   # Quality Gate 5: Bundle Analysis
   bundle-analysis:
@@ -143,6 +133,8 @@ jobs:
         env:
           ANALYZE: true
           NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       
       - name: Upload bundle analysis
         uses: actions/upload-artifact@v4

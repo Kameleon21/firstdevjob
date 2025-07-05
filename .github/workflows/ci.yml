@@ -3,14 +3,18 @@ name: CI/CD Pipeline
 on:
   # Run on all pull requests
   pull_request:
-    branches: [ main, develop ]
+    branches: [ Master, develop ]
   
   # Run on pushes to main and develop branches
   push:
-    branches: [ main, develop ]
+    branches: [ Master, develop ]
   
   # Allow manual triggering
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   # Job 1: Run Tests
@@ -75,8 +79,9 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          # Add any environment variables needed for build
           NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
   # Job 3: Security Audit
   security:
