@@ -3,7 +3,7 @@ name: CI/CD Pipeline
 on:
   # Run on all pull requests
   pull_request:
-    branches: [ Master, develop ]
+    branches: [ Master, develop, "**" ]
   
   # Run on pushes to main and develop branches
   push:
