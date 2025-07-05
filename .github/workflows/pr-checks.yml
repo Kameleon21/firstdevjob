@@ -45,7 +45,7 @@ jobs:
 
   # Quality Gate 2: Type Safety
   type-check:
-    name: TypeScript Type Check
+    name: TypeScript Type Checks
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     

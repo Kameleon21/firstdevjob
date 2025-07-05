@@ -15,7 +15,7 @@ on:
 jobs:
   # Job 1: Run Tests
   test:
-    name: Run Tests
+    name: Run Test
     runs-on: ubuntu-latest
     
     strategy:
