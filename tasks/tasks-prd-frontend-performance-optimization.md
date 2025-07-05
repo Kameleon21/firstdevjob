@@ -36,14 +36,14 @@
   - [x] 2.4 Add error handling for the server-side search function
   - [x] 2.5 Test the server action manually to ensure it returns expected results
 
-- [ ] 3.0 Refactor Job Search with SWR Data Fetching
-  - [ ] 3.1 Update `src/components/JobSearchWrapper.tsx` to use `useSWR` hook
-  - [ ] 3.2 Create dynamic SWR key based on search query and selected tags
-  - [ ] 3.3 Implement debounced search query state management
-  - [ ] 3.4 Update loading states to use SWR's `isLoading` and `isValidating` flags
-  - [ ] 3.5 Remove client-side filtering logic and use server-returned data directly
-  - [ ] 3.6 Ensure stale data remains visible while new data is being fetched
-  - [ ] 3.7 Write unit tests for the refactored JobSearchWrapper component
+- [x] 3.0 Refactor Job Search with SWR Data Fetching
+  - [x] 3.1 Update `src/components/JobSearchWrapper.tsx` to use `useSWR` hook
+  - [x] 3.2 Create dynamic SWR key based on search query and selected tags
+  - [x] 3.3 Implement debounced search query state management
+  - [x] 3.4 Update loading states to use SWR's `isLoading` and `isValidating` flags
+  - [x] 3.5 Remove client-side filtering logic and use server-returned data directly
+  - [x] 3.6 Ensure stale data remains visible while new data is being fetched
+  - [x] 3.7 Write unit tests for the refactored JobSearchWrapper component
 
 - [ ] 4.0 Optimize Dashboard Page Performance
   - [ ] 4.1 Analyze current dashboard data fetching in `src/app/dashboard/page.tsx`
