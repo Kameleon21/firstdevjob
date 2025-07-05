@@ -64,31 +64,31 @@ export default function DashboardPage() {
       try {
         const supabase = createClient()
         const { data: { user }, error: authError } = await supabase.auth.getUser()
-        
+  
         if (authError || !user) {
           router.push('/auth/login?message=Please sign in to view your dashboard')
           return
-        }
+  }
 
         // Load data in parallel
         const [bookmarksData, userRoleData, tagsData] = await Promise.all([
-          getUserBookmarks(),
+    getUserBookmarks(),
           checkUserRole(),
           getAllTags()
-        ])
+  ])
 
         setBookmarks(bookmarksData)
         setUserRole(userRoleData)
         setAllTags(tagsData)
 
-        // Fetch pending jobs if user is admin/moderator
+  // Fetch pending jobs if user is admin/moderator
         if (userRoleData.isModerator) {
-          try {
+    try {
             const pendingJobsData = await getPendingJobs()
             setPendingJobs(pendingJobsData)
-          } catch (error) {
-            console.error('Error fetching pending jobs:', error)
-          }
+    } catch (error) {
+      console.error('Error fetching pending jobs:', error)
+    }
         }
       } catch (error) {
         console.error('Error loading dashboard data:', error)

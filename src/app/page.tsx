@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import PageWrapper from '@/components/PageWrapper';
 import { getAllTags } from '@/app/actions/search';
+import SWRTestComponent from '@/components/SWRTestComponent';
 
 interface Job {
   id: number;
@@ -66,6 +67,9 @@ export default async function Home() {
   const allTags = await getAllTags();
 
   return (
-    <PageWrapper initialJobs={jobs} allTags={allTags} />
+    <>
+      <SWRTestComponent />
+      <PageWrapper initialJobs={jobs} allTags={allTags} />
+    </>
   );
 }

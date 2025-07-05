@@ -133,13 +133,13 @@ const createMockQueryBuilder = (table: string) => {
   if (table === 'job') {
     mockQueryBuilder.insert.mockImplementation(() => ({
       ...mockQueryBuilder,
-      select: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
         ...mockQueryBuilder,
-        single: jest.fn().mockResolvedValue({
+          single: jest.fn().mockResolvedValue({
           data: { id: Date.now() },
-          error: null
+            error: null
+          })
         })
-      })
     }))
   }
 
