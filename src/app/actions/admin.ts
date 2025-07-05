@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
-interface PendingJob {
+export interface PendingJob {
   id: number;
   created_at: string;
   title: string;

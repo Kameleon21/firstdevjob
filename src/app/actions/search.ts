@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createBrowserClient } from '@supabase/ssr'
 
 interface Job {
   id: number;
@@ -141,7 +142,11 @@ export async function searchJobs(searchQuery: string = '', selectedTags: string[
 
 export async function getAllTags(): Promise<string[]> {
   try {
-    const supabase = await createClient();
+    // Use the anonymous client to allow static generation
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
     
     const { data, error } = await supabase
       .from('tags')

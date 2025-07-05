@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getUserBookmarks } from './bookmarks'
 import { checkUserRole, getPendingJobs } from './admin'
+import type { PendingJob } from './admin'
 import { getAllTags } from './search'
 
 export async function getDashboardData() {
@@ -25,7 +26,7 @@ export async function getDashboardData() {
     getAllTags(),
   ])
 
-  let pendingJobs = []
+  let pendingJobs: PendingJob[] = []
   if (userRole.isModerator) {
     pendingJobs = await getPendingJobs()
   }
