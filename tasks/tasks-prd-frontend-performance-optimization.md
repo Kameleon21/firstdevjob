@@ -6,8 +6,8 @@
 - `src/app/layout.tsx` - Updated to wrap children with SWR provider
 - `src/app/providers.tsx` - SWR configuration provider with default fetcher and caching settings
 - `src/app/actions/search.ts` - Update/create server action for search with filtering
-- `src/components/JobSearchWrapper.tsx` - Refactor to use SWR for data fetching
-- `src/components/JobSearchWrapper.test.tsx` - Unit tests for refactored component
+- `src/components/JobSearchWrapper.tsx` - Refactored to use SWR for server-side data fetching with dynamic keys
+- `tests/components/JobSearchWrapper.test.tsx` - Comprehensive unit tests for refactored SWR-based component
 - `src/app/dashboard/page.tsx` - Refactor to use SWR for dashboard data
 - `src/app/dashboard/page.test.tsx` - Unit tests for dashboard page
 - `src/components/PageWrapper.tsx` - Update to use lazy loading for PostJobModal
@@ -45,13 +45,13 @@
   - [x] 3.6 Ensure stale data remains visible while new data is being fetched
   - [x] 3.7 Write unit tests for the refactored JobSearchWrapper component
 
-- [ ] 4.0 Optimize Dashboard Page Performance
-  - [ ] 4.1 Analyze current dashboard data fetching in `src/app/dashboard/page.tsx`
-  - [ ] 4.2 Create or update server action for dashboard data fetching
-  - [ ] 4.3 Refactor dashboard page to use `useSWR` for data fetching
-  - [ ] 4.4 Implement SWR caching strategy for dashboard data
-  - [ ] 4.5 Test navigation between homepage and dashboard for improved performance
-  - [ ] 4.6 Write unit tests for the dashboard page changes
+- [x] 4.0 Optimize Dashboard Page Performance
+  - [x] 4.1 Analyze current dashboard data fetching in `src/app/dashboard/page.tsx`
+  - [x] 4.2 Create or update server action for dashboard data fetching
+  - [x] 4.3 Refactor dashboard page to use `useSWR` for data fetching
+  - [x] 4.4 Implement SWR caching strategy for dashboard data
+  - [x] 4.5 Test navigation between homepage and dashboard for improved performance
+  - [x] 4.6 Write unit tests for the dashboard page changes
 
 - [ ] 5.0 Implement Performance Enhancements and Lazy Loading
   - [ ] 5.1 Update `src/components/PageWrapper.tsx` to use `dynamic()` import for PostJobModal
