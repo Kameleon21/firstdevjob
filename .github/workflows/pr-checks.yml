@@ -2,7 +2,7 @@ name: Pull Request Checks
 
 on:
   pull_request:
-    branches: [ main, develop ]
+    branches: [ Master, develop ]
     types: [opened, synchronize, reopened, ready_for_review]
 
 # Cancel previous runs if new commits are pushed
