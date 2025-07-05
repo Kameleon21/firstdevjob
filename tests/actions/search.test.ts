@@ -1,9 +1,14 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 import { mockSupabaseClient, resetMockDatabase } from '../mocks/supabase'
 
-// Mock the Supabase server client
+// Mock the Supabase server client for searchJobs
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(() => Promise.resolve(mockSupabaseClient)),
+}))
+
+// Mock the Supabase browser client for getAllTags
+jest.mock('@supabase/ssr', () => ({
+  createBrowserClient: jest.fn(() => mockSupabaseClient),
 }))
 
 // Import after mocking
