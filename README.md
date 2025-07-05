@@ -9,6 +9,8 @@
 
 FirstDevJob is an open-source job board specifically designed for developers seeking their first role in tech. Built with modern web technologies, it provides a streamlined experience for job seekers to discover opportunities and track their applications, while enabling companies to post entry-level positions.
 
+<!-- CI/CD Pipeline Status: Testing workflow fixes -->
+
 ## ✨ Features
 
 ### 🔍 **Job Discovery**
