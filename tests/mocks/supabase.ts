@@ -35,7 +35,7 @@ export interface MockBookmark {
 let mockUsers: MockUser[] = []
 let mockJobs: MockJob[] = []
 let mockBookmarks: MockBookmark[] = []
-let mockTags: Array<{ id: number; name: string }> = [
+const mockTags: Array<{ id: number; name: string }> = [
   { id: 1, name: 'React' },
   { id: 2, name: 'TypeScript' },
   { id: 3, name: 'Node.js' },
@@ -100,65 +100,64 @@ export const createMockBookmark = (overrides: Partial<MockBookmark> = {}): MockB
   ...overrides
 })
 
-// Create a mock query builder that supports chaining
+// Create a simplified mock query builder
 const createMockQueryBuilder = (table: string) => {
-  const queryBuilder = {
-    insert: jest.fn().mockReturnValue(queryBuilder),
-    select: jest.fn().mockReturnValue(queryBuilder),
-    single: jest.fn().mockResolvedValue({ data: null, error: null }),
-    update: jest.fn().mockReturnValue(queryBuilder),
-    delete: jest.fn().mockReturnValue(queryBuilder),
-    eq: jest.fn().mockReturnValue(queryBuilder),
-    in: jest.fn().mockReturnValue(queryBuilder),
-    gte: jest.fn().mockReturnValue(queryBuilder),
-    lte: jest.fn().mockReturnValue(queryBuilder),
-    order: jest.fn().mockReturnValue(queryBuilder),
-    limit: jest.fn().mockReturnValue(queryBuilder),
-    range: jest.fn().mockReturnValue(queryBuilder),
-    // Add promise-like behavior for queries without explicit resolution
+  const mockQueryBuilder = {
+    insert: jest.fn(),
+    select: jest.fn(),
+    single: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    eq: jest.fn(),
+    in: jest.fn(),
+    gte: jest.fn(),
+    lte: jest.fn(),
+    order: jest.fn(),
+    limit: jest.fn(),
+    range: jest.fn(),
     then: jest.fn(),
     catch: jest.fn(),
   }
 
-  // Setup default behaviors based on table
-  if (table === 'job') {
-    queryBuilder.insert.mockImplementation((data) => {
-      const newJob = { id: Date.now(), ...data }
-      return {
-        ...queryBuilder,
-        select: jest.fn().mockReturnValue({
-          ...queryBuilder,
-          single: jest.fn().mockResolvedValue({
-            data: newJob,
-            error: null
-          })
-        })
-      }
-    })
-  }
+  // Set up chaining - all methods return the builder for chaining
+  Object.keys(mockQueryBuilder).forEach(key => {
+    if (key !== 'then' && key !== 'catch') {
+      mockQueryBuilder[key as keyof typeof mockQueryBuilder].mockReturnValue(mockQueryBuilder)
+    }
+  })
 
-  if (table === 'tags') {
-    queryBuilder.select.mockResolvedValue({
-      data: mockTags,
-      error: null
-    })
-    queryBuilder.in.mockImplementation((column, values) => ({
-      ...queryBuilder,
-      then: (resolve) => resolve({
-        data: mockTags.filter(tag => values.includes(tag.name)),
-        error: null
+  // Set up default resolved values
+  mockQueryBuilder.single.mockResolvedValue({ data: null, error: null })
+
+  // Setup specific table behaviors
+  if (table === 'job') {
+    mockQueryBuilder.insert.mockImplementation(() => ({
+      ...mockQueryBuilder,
+      select: jest.fn().mockReturnValue({
+        ...mockQueryBuilder,
+        single: jest.fn().mockResolvedValue({
+          data: { id: Date.now() },
+          error: null
+        })
       })
     }))
   }
 
+  if (table === 'tags') {
+    mockQueryBuilder.select.mockResolvedValue({
+      data: mockTags,
+      error: null
+    })
+  }
+
   if (table === 'job_tags') {
-    queryBuilder.insert.mockResolvedValue({
+    mockQueryBuilder.insert.mockResolvedValue({
       data: null,
       error: null
     })
   }
 
-  return queryBuilder
+  return mockQueryBuilder
 }
 
 // Mock Supabase auth
@@ -182,6 +181,10 @@ export const mockSupabaseAuth = {
   }),
   signInWithOAuth: jest.fn().mockResolvedValue({
     data: { url: 'https://oauth-url.com' },
+    error: null
+  }),
+  getSession: jest.fn().mockResolvedValue({
+    data: { session: null },
     error: null
   }),
 }
