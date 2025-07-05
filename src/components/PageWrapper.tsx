@@ -1,11 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import Header from './Header'
 import HeroSection from './HeroSection'
 import JobSearchWrapper from './JobSearchWrapper'
-import PostJobModal from './PostJobModal'
 import Toast from './Toast'
+
+const PostJobModal = dynamic(() => import('./PostJobModal'), {
+  ssr: false,
+})
 
 interface Job {
   id: number;
@@ -57,12 +61,14 @@ export default function PageWrapper({ initialJobs, allTags }: PageWrapperProps) 
       </div>
 
       {/* Post Job Modal */}
-      <PostJobModal
-        isOpen={isPostJobModalOpen}
-        onClose={handleClosePostJobModal}
-        allTags={allTags}
-        onSuccess={handleJobPostSuccess}
-      />
+      {isPostJobModalOpen && (
+        <PostJobModal
+          isOpen={isPostJobModalOpen}
+          onClose={handleClosePostJobModal}
+          allTags={allTags}
+          onSuccess={handleJobPostSuccess}
+        />
+      )}
 
       {/* Toast Notification */}
       <Toast

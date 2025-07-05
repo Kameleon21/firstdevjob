@@ -1,9 +1,14 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 import { mockSupabaseClient, resetMockDatabase } from '../mocks/supabase'
 
-// Mock the Supabase server client
+// Mock the Supabase server client for searchJobs
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(() => Promise.resolve(mockSupabaseClient)),
+}))
+
+// Mock the Supabase browser client for getAllTags
+jest.mock('@supabase/ssr', () => ({
+  createBrowserClient: jest.fn(() => mockSupabaseClient),
 }))
 
 // Import after mocking
@@ -126,18 +131,43 @@ describe('Search Actions', () => {
     })
 
     it('should filter jobs by selected tags', async () => {
-      const mockQuery = {
+      const mockTagsQuery = {
+        select: jest.fn().mockReturnValue({
+          in: jest.fn().mockResolvedValue({
+            data: [{ id: 1 }], // React tag ID
+            error: null
+          })
+        })
+      }
+
+      const mockJobTagsQuery = {
+        select: jest.fn().mockReturnValue({
+          in: jest.fn().mockResolvedValue({
+            data: [{ job_id: 1 }, { job_id: 3 }], // Jobs with React tag
+            error: null
+          })
+        })
+      }
+
+      const mockJobQuery = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({
-          data: mockJobsData,
+        order: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [mockJobsData[0], mockJobsData[2]], // Jobs 1 and 3 with React
           error: null
         })
       }
 
       mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'tags') {
+          return mockTagsQuery
+        }
+        if (table === 'job_tags') {
+          return mockJobTagsQuery
+        }
         if (table === 'job') {
-          return mockQuery
+          return mockJobQuery
         }
         return {}
       })
@@ -149,34 +179,65 @@ describe('Search Actions', () => {
       expect(result[0].title).toBe('Frontend Developer')
       expect(result[1].title).toBe('Full Stack Developer')
       
+      // Verify server-side queries were called
+      expect(mockTagsQuery.select).toHaveBeenCalledWith('id')
+      expect(mockJobTagsQuery.select).toHaveBeenCalledWith('job_id')
+      expect(mockJobQuery.in).toHaveBeenCalledWith('id', [1, 3])
+      
       // Verify both have React tag
       expect(result[0].tags.some(tag => tag.name === 'React')).toBe(true)
       expect(result[1].tags.some(tag => tag.name === 'React')).toBe(true)
     })
 
     it('should combine search query and tag filters', async () => {
-      const mockQuery = {
+      const mockTagsQuery = {
+        select: jest.fn().mockReturnValue({
+          in: jest.fn().mockResolvedValue({
+            data: [{ id: 1 }], // React tag ID
+            error: null
+          })
+        })
+      }
+
+      const mockJobTagsQuery = {
+        select: jest.fn().mockReturnValue({
+          in: jest.fn().mockResolvedValue({
+            data: [{ job_id: 1 }, { job_id: 3 }], // Jobs with React tag
+            error: null
+          })
+        })
+      }
+
+      const mockJobQuery = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        or: jest.fn().mockResolvedValue({
-          data: [mockJobsData[0]], // Only Frontend Developer from TechCorp
+        or: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [mockJobsData[0]], // Only Frontend Developer matches both filters
           error: null
         })
       }
 
       mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'tags') {
+          return mockTagsQuery
+        }
+        if (table === 'job_tags') {
+          return mockJobTagsQuery
+        }
         if (table === 'job') {
-          return mockQuery
+          return mockJobQuery
         }
         return {}
       })
 
       const result = await searchJobs('Frontend', ['React'])
 
-      expect(mockQuery.or).toHaveBeenCalledWith(
+      expect(mockJobQuery.or).toHaveBeenCalledWith(
         'title.ilike.%Frontend%,company.ilike.%Frontend%,location.ilike.%Frontend%'
       )
+      expect(mockJobQuery.in).toHaveBeenCalledWith('id', [1, 3])
       expect(result).toHaveLength(1)
       expect(result[0].title).toBe('Frontend Developer')
       expect(result[0].tags.some(tag => tag.name === 'React')).toBe(true)
@@ -326,18 +387,43 @@ describe('Search Actions', () => {
     })
 
     it('should handle multiple tag filters correctly', async () => {
-      const mockQuery = {
+      const mockTagsQuery = {
+        select: jest.fn().mockReturnValue({
+          in: jest.fn().mockResolvedValue({
+            data: [{ id: 1 }, { id: 3 }], // React and Node.js tag IDs
+            error: null
+          })
+        })
+      }
+
+      const mockJobTagsQuery = {
+        select: jest.fn().mockReturnValue({
+          in: jest.fn().mockResolvedValue({
+            data: [{ job_id: 1 }, { job_id: 2 }, { job_id: 3 }], // All jobs have either React or Node.js
+            error: null
+          })
+        })
+      }
+
+      const mockJobQuery = {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        order: jest.fn().mockResolvedValue({
-          data: mockJobsData,
+        order: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: mockJobsData, // All jobs match the tag filter
           error: null
         })
       }
 
       mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'tags') {
+          return mockTagsQuery
+        }
+        if (table === 'job_tags') {
+          return mockJobTagsQuery
+        }
         if (table === 'job') {
-          return mockQuery
+          return mockJobQuery
         }
         return {}
       })
@@ -346,6 +432,7 @@ describe('Search Actions', () => {
 
       // Should return jobs that have either React OR Node.js
       expect(result).toHaveLength(3) // All jobs have at least one of these tags
+      expect(mockJobQuery.in).toHaveBeenCalledWith('id', [1, 2, 3])
     })
   })
 
