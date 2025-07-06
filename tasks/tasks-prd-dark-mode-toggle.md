@@ -24,22 +24,22 @@
   - [x] 1.6 Create a `useTheme` custom hook to easily access the theme context.
   - [x] 1.7 In `src/app/layout.tsx`, wrap the children with the `ThemeProvider` and apply the current theme as a `data-theme` attribute on the `<html>` tag.
 
-- [ ] 2.0 Define and Implement Theme Color Variables
-  - [ ] 2.1 In `src/app/globals.css`, define CSS variables for the dark theme under `:root[data-theme='dark']`. Use the existing colors (black background, white foreground, various purple shades).
-  - [ ] 2.2 In `src/app/globals.css`, define CSS variables for the light theme under `:root[data-theme='light']`. Use a white background, dark text, and lighter shades of purple.
-  - [ ] 2.3 Refactor existing Tailwind utility classes in components to use the new CSS variables (e.g., `bg-background`, `text-foreground`).
-  
-- [ ] 3.0 Create the Theme Toggle Component
-  - [ ] 3.1 Create a new file `src/components/ThemeToggle.tsx`.
-  - [ ] 3.2 Add `sun` and `moon` icons (from an icon library like `lucide-react`).
-  - [ ] 3.3 Use the `useTheme` hook to get the current theme and the `toggleTheme` function.
-  - [ ] 3.4 Implement the `onClick` handler to call `toggleTheme`.
-  - [ ] 3.5 Add CSS to conditionally display the correct icon based on the current theme.
-  - [ ] 3.6 Implement the rotating animation (300ms, ease-in-out) for the icon transition.
-  - [ ] 3.7 Create a corresponding test file `src/components/ThemeToggle.test.tsx` to verify that the component renders and toggles correctly.
+- [x] 2.0 Define and Implement Theme Color Variables
+  - [x] 2.1 In `src/app/globals.css`, define CSS variables for the dark theme under `:root[data-theme='dark']`. Use the existing colors (black background, white foreground, various purple shades).
+  - [x] 2.2 In `src/app/globals.css`, define CSS variables for the light theme under `:root[data-theme='light']`. Use a white background, dark text, and lighter shades of purple.
+  - [x] 2.3 Refactor existing Tailwind utility classes in components to use the new CSS variables (e.g., `bg-background`, `text-foreground`).
 
-- [ ] 4.0 Integrate Theme Toggle into Application Header
-  - [ ] 4.1 Import and place the `ThemeToggle` component within `src/components/Header.tsx`.
+- [x] 3.0 Create the Theme Toggle Component
+  - [x] 3.1 Create a new file `src/components/ThemeToggle.tsx`.
+  - [x] 3.2 Add `sun` and `moon` icons (from an icon library like `lucide-react`).
+  - [x] 3.3 Use the `useTheme` hook to get the current theme and the `toggleTheme` function.
+  - [x] 3.4 Implement the `onClick` handler to call `toggleTheme`.
+  - [x] 3.5 Add CSS to conditionally display the correct icon based on the current theme.
+  - [x] 3.6 Implement the rotating animation (300ms, ease-in-out) for the icon transition.
+  - [x] 3.7 Create a corresponding test file `src/components/ThemeToggle.test.tsx` to verify that the component renders and toggles correctly.
+
+- [x] 4.0 Integrate Theme Toggle into Application Header
+  - [x] 4.1 Import and place the `ThemeToggle` component within `src/components/Header.tsx`.
 
 - [ ] 5.0 Ensure Theme Consistency Across All Components
   - [ ] 5.1 Systematically review all components and pages to ensure they adapt correctly to both themes.

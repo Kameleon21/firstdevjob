@@ -26,12 +26,12 @@ interface DashboardJobCardProps {
 }
 
 const statusOptions = [
-  { value: 'saved', label: 'Saved', color: 'bg-gray-700 text-gray-300' },
+  { value: 'saved', label: 'Saved', color: 'bg-muted text-muted-foreground' },
   { value: 'applied', label: 'Applied', color: 'bg-blue-700 text-blue-300' },
   { value: 'interviewing', label: 'Interviewing', color: 'bg-yellow-700 text-yellow-300' },
   { value: 'offer', label: 'Offer', color: 'bg-green-700 text-green-300' },
   { value: 'rejected', label: 'Rejected', color: 'bg-red-700 text-red-300' },
-  { value: 'accepted', label: 'Accepted', color: 'bg-purple-700 text-purple-300' }
+  { value: 'accepted', label: 'Accepted', color: 'bg-primary text-primary-foreground' }
 ]
 
 export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
@@ -76,10 +76,10 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
   }
 
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200">
+    <div className="bg-background border border-border rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200">
       {/* Header with title and status */}
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-lg font-semibold text-white pr-4 flex-1">
+        <h3 className="text-lg font-semibold text-foreground pr-4 flex-1">
           {bookmark.job.title}
         </h3>
         <div className="relative">
@@ -87,21 +87,21 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
             onClick={() => setShowDropdown(!showDropdown)}
             disabled={isUpdating}
             className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
-              currentStatusOption?.color || 'bg-gray-700 text-gray-300'
-            } border-gray-600 hover:border-gray-500 disabled:opacity-50`}
+              currentStatusOption?.color || 'bg-muted text-muted-foreground'
+            } border-border hover:border-primary disabled:opacity-50`}
           >
             {currentStatusOption?.label || 'Unknown'}
             <ChevronDown size={14} className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
           </button>
           
           {showDropdown && (
-            <div className="absolute top-full right-0 mt-2 w-48 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-10">
+            <div className="absolute top-full right-0 mt-2 w-48 bg-muted border border-border rounded-lg shadow-xl z-10">
               {statusOptions.map((option) => (
                 <button
                   key={option.value}
                   onClick={() => handleStatusUpdate(option.value)}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-700 transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                    option.value === currentStatus ? 'bg-gray-700' : ''
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-background/50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                    option.value === currentStatus ? 'bg-background/50' : ''
                   }`}
                 >
                   <span className={`inline-block w-3 h-3 rounded-full mr-3 ${option.color.split(' ')[0]}`}></span>
@@ -115,26 +115,26 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
 
       {/* Company and Location */}
       <div className="flex items-center gap-3 mb-3">
-        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
-        <span className="text-gray-300 font-medium">{bookmark.job.company}</span>
+        <span className="text-muted-foreground font-medium">{bookmark.job.company}</span>
       </div>
 
       <div className="flex items-center gap-3 mb-3">
-        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
-        <span className="text-gray-300">{bookmark.job.location}</span>
+        <span className="text-muted-foreground">{bookmark.job.location}</span>
       </div>
 
       {/* Date */}
       <div className="flex items-center gap-3 mb-4">
-        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
-        <span className="text-gray-300 text-sm">
+        <span className="text-muted-foreground text-sm">
           Posted {new Date(bookmark.job.created_at).toLocaleDateString('en-US', { 
             year: 'numeric', 
             month: 'short', 
@@ -149,7 +149,7 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
           {bookmark.job.tags.map((tag) => (
             <span
               key={tag.id}
-              className="bg-purple-900 text-purple-300 px-2 py-1 rounded text-xs font-medium border border-purple-700"
+              className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-xs font-medium border border-primary"
             >
               {tag.name}
             </span>
@@ -160,11 +160,11 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
       {/* Notes Section */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-sm font-medium text-gray-300">Notes</h4>
+          <h4 className="text-sm font-medium text-muted-foreground">Notes</h4>
           {!isEditingNotes && (
             <button
               onClick={() => setIsEditingNotes(true)}
-              className="text-gray-400 hover:text-white transition-colors p-1"
+              className="text-muted-foreground hover:text-foreground transition-colors p-1"
               title="Edit notes"
             >
               <Edit3 size={14} />
@@ -178,14 +178,14 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add your notes about this job application..."
-              className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm resize-none"
+              className="w-full p-3 bg-muted border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent text-sm resize-none"
               rows={3}
             />
             <div className="flex gap-2">
               <button
                 onClick={handleNotesUpdate}
                 disabled={isUpdating}
-                className="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1 px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary-hover transition-colors disabled:opacity-50"
               >
                 <Save size={14} />
                 Save
@@ -193,7 +193,7 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
               <button
                 onClick={cancelNotesEdit}
                 disabled={isUpdating}
-                className="flex items-center gap-1 px-3 py-1 bg-gray-700 text-gray-300 rounded text-sm hover:bg-gray-600 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1 px-3 py-1 bg-muted text-muted-foreground rounded text-sm hover:bg-muted/80 transition-colors disabled:opacity-50"
               >
                 <X size={14} />
                 Cancel
@@ -203,7 +203,7 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
         ) : (
           <div 
             onClick={() => setIsEditingNotes(true)}
-            className="text-sm text-gray-400 min-h-[2rem] p-2 bg-gray-800 rounded border border-gray-700 cursor-pointer hover:bg-gray-700 hover:border-gray-600 transition-colors"
+            className="text-sm text-muted-foreground min-h-[2rem] p-2 bg-muted rounded border border-border cursor-pointer hover:bg-background/50 hover:border-border/80 transition-colors"
             title="Click to edit notes"
           >
             {notes || 'No notes added yet. Click here or the edit icon to add notes.'}
@@ -217,7 +217,7 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
           href={bookmark.job.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-colors text-sm"
+          className="flex items-center gap-2 text-accent hover:opacity-80 transition-colors text-sm"
         >
           <ExternalLink size={16} />
           View Job Posting

@@ -54,10 +54,10 @@ export default function AdminSection({ initialPendingJobs, userRole }: AdminSect
           <div className="flex items-center gap-3">
             <Shield className="w-6 h-6 text-yellow-400" />
             <div>
-              <h2 className="text-xl font-semibold text-white">
+              <h2 className="text-xl font-semibold text-foreground">
                 {userRole.isAdmin ? 'Admin Panel' : 'Moderator Panel'}
               </h2>
-              <p className="text-gray-400 text-sm">
+              <p className="text-muted-foreground text-sm">
                 Review and approve pending job submissions
               </p>
             </div>
@@ -65,7 +65,7 @@ export default function AdminSection({ initialPendingJobs, userRole }: AdminSect
           <button
             onClick={refreshPendingJobs}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-3 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors disabled:opacity-50"
           >
             <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
             Refresh
@@ -77,7 +77,7 @@ export default function AdminSection({ initialPendingJobs, userRole }: AdminSect
       <div className="mb-6">
         <div className="flex items-center gap-2 text-sm">
           <Clock className="w-4 h-4 text-yellow-400" />
-          <span className="text-gray-300">
+          <span className="text-muted-foreground">
             {pendingJobs.length} job{pendingJobs.length !== 1 ? 's' : ''} pending review
           </span>
         </div>
@@ -86,12 +86,12 @@ export default function AdminSection({ initialPendingJobs, userRole }: AdminSect
       {/* Pending Jobs Grid */}
       {pendingJobs.length === 0 ? (
         <div className="text-center py-8">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-8">
-            <Clock className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">
+          <div className="bg-background border border-border rounded-xl p-8">
+            <Clock className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">
               No Pending Jobs
             </h3>
-            <p className="text-gray-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               All job submissions have been reviewed. New submissions will appear here.
             </p>
           </div>
@@ -109,7 +109,7 @@ export default function AdminSection({ initialPendingJobs, userRole }: AdminSect
       )}
 
       {/* Separator */}
-      <div className="border-t border-gray-700 mb-8" />
+      <div className="border-t border-border mb-8" />
     </div>
   )
 } 
