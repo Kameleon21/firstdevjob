@@ -3,10 +3,12 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BarChart3, Plus, Menu, X, User, LogOut } from 'lucide-react';
+import { Home, BarChart3, Plus, Menu, X, User, LogOut, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from './AuthModal';
+import { ThemeToggle } from './ThemeToggle';
+import { useTheme } from './ThemeProvider';
 
 interface HeaderProps {
   onPostJobClick?: () => void
@@ -16,6 +18,7 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { user, isAuthenticated, loading } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
 
   const toggleMobileMenu = () => {
@@ -30,13 +33,13 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
   };
 
   return (
-    <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-40">
+    <header className="bg-background border-b border-border sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link
               href="/"
-              className="text-2xl font-bold text-purple-400 hover:text-purple-300 transition-colors"
+              className="text-2xl font-bold text-accent hover:text-secondary-foreground transition-colors"
             >
               FirstDevJob
             </Link>
@@ -47,9 +50,9 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
             <Link
               href="/"
               className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                pathname === '/' 
-                  ? 'bg-purple-900 text-purple-300' 
-                  : 'text-gray-300 hover:text-white'
+                pathname === '/'
+                  ? 'bg-secondary text-secondary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <Home size={20} className="mr-2" />
@@ -60,9 +63,9 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               <Link
                 href="/dashboard"
                 className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                  pathname === '/dashboard' 
-                    ? 'bg-purple-900 text-purple-300' 
-                    : 'text-gray-300 hover:text-white'
+                  pathname === '/dashboard'
+                    ? 'bg-secondary text-secondary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <BarChart3 size={20} className="mr-2" />
@@ -72,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
 
             <button
               onClick={onPostJobClick}
-              className="flex items-center px-3 py-2 text-gray-300 hover:text-white rounded-lg transition-colors"
+              className="flex items-center px-3 py-2 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
             >
               <Plus size={20} className="mr-2" />
               Post Job
@@ -82,12 +85,12 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
           {/* Auth Section */}
           <div className="flex items-center space-x-4">
             {loading ? (
-              <div className="hidden md:block w-20 h-10 bg-gray-800 rounded-lg animate-pulse"></div>
+              <div className="hidden md:block w-20 h-10 bg-muted rounded-lg animate-pulse"></div>
             ) : isAuthenticated ? (
               <div className="flex items-center space-x-3">
                 <div className="hidden sm:block">
-                  <span className="text-sm text-gray-400">Welcome, </span>
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-sm text-muted-foreground">Welcome, </span>
+                  <span className="text-sm font-medium text-foreground">
                     {user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0]}
                   </span>
                 </div>
@@ -95,17 +98,18 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                   <Link
                     href="/profile"
                     className={`p-2 rounded-lg transition-colors ${
-                      pathname === '/profile' 
-                        ? 'bg-purple-900 text-purple-300' 
-                        : 'text-gray-400 hover:text-white'
+                      pathname === '/profile'
+                        ? 'bg-secondary text-secondary-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                     title="Profile"
                   >
                     <User size={20} />
                   </Link>
+                  <ThemeToggle />
                   <button
                     onClick={handleSignOut}
-                    className="p-2 text-gray-400 hover:text-white rounded-lg transition-colors"
+                    className="p-2 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
                     title="Sign Out"
                   >
                     <LogOut size={20} />
@@ -113,18 +117,21 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => setAuthModalOpen(true)}
-                className="hidden md:inline-flex px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Sign In
-              </button>
+              <div className="flex items-center space-x-4">
+                <ThemeToggle />
+                <button
+                  onClick={() => setAuthModalOpen(true)}
+                  className="hidden md:inline-flex px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
+                >
+                  Sign In
+                </button>
+              </div>
             )}
 
             {/* Mobile Menu Button */}
             <button
               onClick={toggleMobileMenu}
-              className="md:hidden p-2 text-gray-400 hover:text-white rounded-lg transition-colors"
+              className="md:hidden p-2 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -134,15 +141,15 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
 
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-800 bg-gray-900">
+        <div className="md:hidden border-t border-border bg-background">
           <nav className="py-4 space-y-2">
             <Link
               href="/"
               onClick={toggleMobileMenu}
               className={`flex items-center w-full px-4 py-2 transition-colors ${
-                pathname === '/' 
-                  ? 'bg-purple-900 text-purple-300' 
-                  : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                pathname === '/'
+                  ? 'bg-secondary text-secondary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
               <Home size={20} className="mr-3" />
@@ -154,9 +161,9 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                 href="/dashboard"
                 onClick={toggleMobileMenu}
                 className={`flex items-center w-full px-4 py-2 transition-colors ${
-                  pathname === '/dashboard' 
-                    ? 'bg-purple-900 text-purple-300' 
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                  pathname === '/dashboard'
+                    ? 'bg-secondary text-secondary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <BarChart3 size={20} className="mr-3" />
@@ -169,7 +176,7 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                 onPostJobClick?.();
                 toggleMobileMenu();
               }}
-              className="flex items-center w-full px-4 py-2 text-gray-300 transition-colors hover:text-white hover:bg-gray-800"
+              className="flex items-center w-full px-4 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
             >
               <Plus size={20} className="mr-3" />
               Post Job
@@ -180,9 +187,9 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                 href="/profile"
                 onClick={toggleMobileMenu}
                 className={`flex items-center w-full px-4 py-2 transition-colors ${
-                  pathname === '/profile' 
-                    ? 'bg-purple-900 text-purple-300' 
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                  pathname === '/profile'
+                    ? 'bg-secondary text-secondary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <User size={20} className="mr-3" />
@@ -190,15 +197,36 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               </Link>
             )}
 
+            <button
+              onClick={() => {
+                toggleTheme();
+                toggleMobileMenu();
+              }}
+              className="flex items-center w-full px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <div className="mr-3">
+                {/* Show theme icon directly aligned with other icons */}
+                <div className="relative">
+                  <Sun className={`h-5 w-5 transition-all duration-300 ease-in-out ${
+                    theme === 'dark' ? 'rotate-90 scale-0' : 'rotate-0 scale-100'
+                  }`} />
+                  <Moon className={`absolute top-0 left-0 h-5 w-5 transition-all duration-300 ease-in-out ${
+                    theme === 'dark' ? 'rotate-0 scale-100' : '-rotate-90 scale-0'
+                  }`} />
+                </div>
+              </div>
+              <span>Theme</span>
+            </button>
+
             {loading ? (
-              <div className="mx-4 h-12 bg-gray-800 rounded-lg animate-pulse"></div>
+              <div className="mx-4 h-12 bg-muted rounded-lg animate-pulse"></div>
             ) : !isAuthenticated ? (
               <button
                 onClick={() => {
                   setAuthModalOpen(true);
                   toggleMobileMenu();
                 }}
-                className="flex items-center w-full px-4 py-2 text-gray-300 transition-colors hover:text-white hover:bg-gray-800"
+                className="flex items-center w-full px-4 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
               >
                 <User size={20} className="mr-3" />
                 Sign In
@@ -209,7 +237,7 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                   handleSignOut();
                   toggleMobileMenu();
                 }}
-                className="flex items-center w-full px-4 py-2 text-gray-300 transition-colors hover:text-white hover:bg-gray-800"
+                className="flex items-center w-full px-4 py-2 text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
               >
                 <LogOut size={20} className="mr-3" />
                 Sign Out

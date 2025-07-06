@@ -81,27 +81,27 @@ export default function ResetPasswordPage() {
 
   if (validatingSession) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
 
   if (success) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
-        <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-xl p-8 max-w-md mx-auto text-center">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="bg-background border border-border rounded-2xl shadow-xl p-8 max-w-md mx-auto text-center">
           <div className="mb-6">
-            <CheckCircle className="w-16 h-16 text-green-400 mx-auto" />
+            <CheckCircle className="w-16 h-16 text-success mx-auto" />
           </div>
-          <h1 className="text-2xl font-semibold text-white mb-4">
+          <h1 className="text-2xl font-semibold text-foreground mb-4">
             Password Updated!
           </h1>
-          <p className="text-gray-300 mb-6">
+          <p className="text-muted-foreground mb-6">
             Your password has been successfully updated. You&apos;ll be redirected to the home page shortly.
           </p>
-          <div className="w-full bg-gray-700 rounded-full h-2">
-            <div className="bg-purple-600 h-2 rounded-full animate-pulse" style={{ width: '100%' }}></div>
+          <div className="w-full bg-muted rounded-full h-2">
+            <div className="bg-primary h-2 rounded-full animate-pulse" style={{ width: '100%' }}></div>
           </div>
         </div>
       </div>
@@ -109,25 +109,25 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-xl p-8 max-w-md mx-auto">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="bg-background border border-border rounded-2xl shadow-xl p-8 max-w-md mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold text-white mb-2">Reset Your Password</h1>
-          <p className="text-gray-400 text-sm">
+          <h1 className="text-2xl font-semibold text-foreground mb-2">Reset Your Password</h1>
+          <p className="text-muted-foreground text-sm">
             Enter your new password below
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-900 border border-red-700 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-red-300 text-sm">{error}</p>
+          <div className="mb-6 p-4 bg-error-background border border-error rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
+            <p className="text-error text-sm">{error}</p>
           </div>
         )}
 
         <form onSubmit={handleResetPassword} className="space-y-5">
           <div className="space-y-1">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-muted-foreground mb-2">
               New Password
             </label>
             <div className="relative">
@@ -136,7 +136,7 @@ export default function ResetPasswordPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-4 pr-12 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full pl-4 pr-12 py-3 bg-muted border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                 placeholder="Enter your new password"
                 required
                 minLength={6}
@@ -144,7 +144,7 @@ export default function ResetPasswordPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -152,7 +152,7 @@ export default function ResetPasswordPage() {
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-muted-foreground mb-2">
               Confirm New Password
             </label>
             <div className="relative">
@@ -161,7 +161,7 @@ export default function ResetPasswordPage() {
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full pl-4 pr-12 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full pl-4 pr-12 py-3 bg-muted border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                 placeholder="Confirm your new password"
                 required
                 minLength={6}
@@ -169,7 +169,7 @@ export default function ResetPasswordPage() {
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -180,7 +180,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {isLoading ? 'Updating Password...' : 'Update Password'}
             </button>
@@ -190,7 +190,7 @@ export default function ResetPasswordPage() {
         <div className="mt-6 text-center">
           <button
             onClick={() => router.push('/')}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Back to Home
           </button>

@@ -41,15 +41,15 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-background">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-800 rounded w-64 mb-4"></div>
-            <div className="h-4 bg-gray-800 rounded w-96 mb-8"></div>
+            <div className="h-8 bg-muted rounded w-64 mb-4"></div>
+            <div className="h-4 bg-muted rounded w-96 mb-8"></div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="h-64 bg-gray-800 rounded-xl"></div>
-              <div className="h-64 bg-gray-800 rounded-xl"></div>
+              <div className="h-64 bg-muted rounded-xl"></div>
+              <div className="h-64 bg-muted rounded-xl"></div>
             </div>
           </div>
         </div>
@@ -59,14 +59,14 @@ export default function DashboardPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-background">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
           <div className="text-center py-16">
-            <h2 className="text-2xl font-semibold text-white mb-4">Could not load dashboard data.</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">Could not load dashboard data.</h2>
             <button
               onClick={() => window.location.reload()}
-              className="inline-flex px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="inline-flex px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
             >
               Retry
             </button>
@@ -79,12 +79,12 @@ export default function DashboardPage() {
   const { bookmarks, userRole, pendingJobs, allTags } = data
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background">
       <Header onPostJobClick={handleOpenPostJobModal} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Your Dashboard</h1>
-          <p className="text-gray-400">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Your Dashboard</h1>
+          <p className="text-muted-foreground">
             Track your job applications and update their status as you progress through the hiring process.
           </p>
         </div>
@@ -94,21 +94,21 @@ export default function DashboardPage() {
 
         {bookmarks.length === 0 ? (
           <div className="text-center py-16">
-            <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-xl p-12 max-w-md mx-auto">
+            <div className="bg-background border border-border rounded-2xl shadow-xl p-12 max-w-md mx-auto">
               <div className="mb-6">
-                <svg className="w-16 h-16 text-purple-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-16 h-16 text-accent mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-semibold text-white mb-4">
+              <h3 className="text-2xl font-semibold text-foreground mb-4">
                 No Bookmarked Jobs
               </h3>
-              <p className="text-gray-400 text-base mb-6">
+              <p className="text-muted-foreground text-base mb-6">
                 Start bookmarking jobs you&apos;re interested in to track your application progress here.
               </p>
               <Link
                 href="/"
-                className="inline-flex px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                className="inline-flex px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
               >
                 Browse Jobs
               </Link>
@@ -117,10 +117,10 @@ export default function DashboardPage() {
         ) : (
           <>
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-white mb-2">
+              <h2 className="text-xl font-semibold text-foreground mb-2">
                 Tracked Applications
               </h2>
-              <p className="text-gray-400 text-sm">
+              <p className="text-muted-foreground text-sm">
                 You have {bookmarks.length} job{bookmarks.length !== 1 ? 's' : ''} in your tracker
               </p>
             </div>

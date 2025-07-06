@@ -91,7 +91,7 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
         {/* Subtle loading indicator for search */}
         {(isSearching || isLoading) && (
           <div className="absolute top-0 right-0 z-10">
-            <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2">
+            <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs flex items-center gap-2">
               <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -105,10 +105,10 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
-              <h2 className="text-2xl font-semibold text-white">
+              <h2 className="text-2xl font-semibold text-foreground">
                 {hasActiveFilters ? 'Search Results' : 'Latest Jobs'}
               </h2>
-              <span className="px-3 py-1 bg-purple-900 text-purple-300 rounded-full text-sm">
+              <span className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm">
                 {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -116,7 +116,7 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
             {hasActiveFilters && (
               <button
                 onClick={handleClearFilters}
-                className="text-purple-400 hover:text-purple-300 text-sm font-medium transition-colors"
+                className="text-accent hover:opacity-80 text-sm font-medium transition-colors"
               >
                 Clear all filters
               </button>
@@ -127,21 +127,21 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
         {/* Error State */}
         {error && (
           <div className="text-center py-16">
-            <div className="bg-red-900 border border-red-700 rounded-2xl shadow-xl p-12 max-w-md mx-auto">
+            <div className="bg-error-background border border-error rounded-2xl shadow-xl p-12 max-w-md mx-auto">
               <div className="mb-6">
-                <svg className="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-16 h-16 text-error mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.665-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-semibold text-white mb-4">
+              <h3 className="text-2xl font-semibold text-foreground mb-4">
                 Search Error
               </h3>
-              <p className="text-gray-400 text-base mb-6">
+              <p className="text-muted-foreground text-base mb-6">
                 Unable to search jobs. Please try again.
               </p>
               <button
                 onClick={() => window.location.reload()}
-                className="inline-flex px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="inline-flex px-6 py-3 bg-error text-error-foreground rounded-lg hover:bg-error/90 transition-colors"
               >
                 Retry
               </button>
@@ -152,16 +152,16 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
         {/* Jobs Grid */}
         {!error && filteredJobs.length === 0 ? (
           <div className="text-center py-16">
-            <div className="bg-gray-900 border border-gray-700 rounded-2xl shadow-xl p-12 max-w-md mx-auto">
+            <div className="bg-background border border-border rounded-2xl shadow-xl p-12 max-w-md mx-auto">
               <div className="mb-6">
-                <svg className="w-16 h-16 text-purple-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-16 h-16 text-accent mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-semibold text-white mb-4">
+              <h3 className="text-2xl font-semibold text-foreground mb-4">
                 {hasActiveFilters ? 'No jobs found' : 'No jobs available'}
               </h3>
-              <p className="text-gray-400 text-base mb-6">
+              <p className="text-muted-foreground text-base mb-6">
                 {hasActiveFilters 
                   ? 'Try adjusting your search terms or selected tags to find more opportunities.'
                   : 'There are currently no approved jobs available. Check back later for new opportunities!'
@@ -170,7 +170,7 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
               {hasActiveFilters && (
                 <button
                   onClick={handleClearFilters}
-                  className="inline-flex px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  className="inline-flex px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
                 >
                   Clear Filters
                 </button>
