@@ -249,7 +249,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-muted text-foreground rounded-lg hover:bg-muted/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium border border-border"
                 >
                   <Github size={20} />
-                  Continue with Github
+                  Continue with GitHub
                 </button>
               </div>
 

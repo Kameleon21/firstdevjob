@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from './AuthModal';
 import { ThemeToggle } from './ThemeToggle';
+import { useTheme } from './ThemeProvider';
 
 interface HeaderProps {
   onPostJobClick?: () => void
@@ -17,6 +18,7 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { user, isAuthenticated, loading } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
 
   const toggleMobileMenu = () => {
@@ -197,12 +199,7 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
 
             <button
               onClick={() => {
-                // We need to access the toggleTheme function from the ThemeToggle component
-                // For now, let's create a simple theme toggle handler
-                const currentTheme = document.documentElement.getAttribute('data-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                document.documentElement.setAttribute('data-theme', newTheme);
-                localStorage.setItem('theme', newTheme);
+                toggleTheme();
                 toggleMobileMenu();
               }}
               className="flex items-center w-full px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -211,10 +208,10 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                 {/* Show theme icon directly aligned with other icons */}
                 <div className="relative">
                   <Sun className={`h-5 w-5 transition-all duration-300 ease-in-out ${
-                    typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark' ? 'rotate-90 scale-0' : 'rotate-0 scale-100'
+                    theme === 'dark' ? 'rotate-90 scale-0' : 'rotate-0 scale-100'
                   }`} />
                   <Moon className={`absolute top-0 left-0 h-5 w-5 transition-all duration-300 ease-in-out ${
-                    typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark' ? 'rotate-0 scale-100' : '-rotate-90 scale-0'
+                    theme === 'dark' ? 'rotate-0 scale-100' : '-rotate-90 scale-0'
                   }`} />
                 </div>
               </div>
