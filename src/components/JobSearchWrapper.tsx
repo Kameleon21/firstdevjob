@@ -127,21 +127,21 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
         {/* Error State */}
         {error && (
           <div className="text-center py-16">
-            <div className="bg-red-900 border border-red-700 rounded-2xl shadow-xl p-12 max-w-md mx-auto">
+            <div className="bg-error-background border border-error rounded-2xl shadow-xl p-12 max-w-md mx-auto">
               <div className="mb-6">
-                <svg className="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-16 h-16 text-error mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.665-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-semibold text-white mb-4">
+              <h3 className="text-2xl font-semibold text-foreground mb-4">
                 Search Error
               </h3>
-              <p className="text-gray-400 text-base mb-6">
+              <p className="text-muted-foreground text-base mb-6">
                 Unable to search jobs. Please try again.
               </p>
               <button
                 onClick={() => window.location.reload()}
-                className="inline-flex px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="inline-flex px-6 py-3 bg-error text-error-foreground rounded-lg hover:bg-error/90 transition-colors"
               >
                 Retry
               </button>

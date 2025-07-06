@@ -24,12 +24,34 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark" suppressHydrationWarning={true}>
       <head>
         <title>Find Your First Dev Job</title>
         <meta name="description" content="Discover amazing opportunities to start your career in tech" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  if (theme) {
+                    document.documentElement.setAttribute('data-theme', theme);
+                  } else {
+                    var systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    var defaultTheme = systemPrefersDark ? 'dark' : 'light';
+                    document.documentElement.setAttribute('data-theme', defaultTheme);
+                    localStorage.setItem('theme', defaultTheme);
+                  }
+                } catch (e) {
+                  // Fallback to dark theme if localStorage fails
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

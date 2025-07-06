@@ -41,7 +41,7 @@
 - [x] 4.0 Integrate Theme Toggle into Application Header
   - [x] 4.1 Import and place the `ThemeToggle` component within `src/components/Header.tsx`.
 
-- [ ] 5.0 Ensure Theme Consistency Across All Components
-  - [ ] 5.1 Systematically review all components and pages to ensure they adapt correctly to both themes.
-  - [ ] 5.2 Replace any hardcoded color classes with the newly defined theme-aware utility classes or CSS variables.
-  - [ ] 5.3 Test the application in both light and dark modes to identify and fix any UI inconsistencies. 
+- [x] 5.0 Ensure Theme Consistency Across All Components
+  - [x] 5.1 Systematically review all components and pages to ensure they adapt correctly to both themes.
+  - [x] 5.2 Replace any hardcoded color classes with the newly defined theme-aware utility classes or CSS variables.
+  - [x] 5.3 Test the application in both light and dark modes to identify and fix any UI inconsistencies. 

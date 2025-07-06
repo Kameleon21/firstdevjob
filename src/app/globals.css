@@ -25,6 +25,22 @@
 
   --highlight-background: var(--secondary);
   --highlight-foreground: var(--secondary-foreground);
+  
+  --success: #16a34a; /* green-600 */
+  --success-foreground: #ffffff;
+  --success-background: #dcfce7; /* green-100 */
+  
+  --error: #dc2626; /* red-600 */
+  --error-foreground: #ffffff;
+  --error-background: #fee2e2; /* red-100 */
+  
+  --info: #2563eb; /* blue-600 */
+  --info-foreground: #ffffff;
+  --info-background: #dbeafe; /* blue-100 */
+  
+  --warning: #f59e0b; /* amber-500 */
+  --warning-foreground: #ffffff;
+  --warning-background: #fef3c7; /* amber-100 */
 }
 
 :root[data-theme="dark"] {
@@ -52,6 +68,22 @@
 
   --highlight-background: var(--secondary);
   --highlight-foreground: var(--secondary-foreground);
+  
+  --success: #22c55e; /* green-500 */
+  --success-foreground: #ffffff;
+  --success-background: #14532d; /* green-900 */
+  
+  --error: #ef4444; /* red-500 */
+  --error-foreground: #ffffff;
+  --error-background: #7f1d1d; /* red-900 */
+  
+  --info: #3b82f6; /* blue-500 */
+  --info-foreground: #ffffff;
+  --info-background: #1e3a8a; /* blue-900 */
+  
+  --warning: #f59e0b; /* amber-500 */
+  --warning-foreground: #ffffff;
+  --warning-background: #78350f; /* amber-900 */
 }
 
 @theme inline {
@@ -68,6 +100,18 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-background: var(--success-background);
+  --color-error: var(--error);
+  --color-error-foreground: var(--error-foreground);
+  --color-error-background: var(--error-background);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-background: var(--info-background);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-background: var(--warning-background);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

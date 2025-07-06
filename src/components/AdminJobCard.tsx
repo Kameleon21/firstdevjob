@@ -41,7 +41,7 @@ export default function AdminJobCard({ job, onJobUpdate }: AdminJobCardProps) {
       {/* Header with pending indicator */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className="px-2 py-1 bg-yellow-900 text-yellow-300 text-xs font-medium rounded-full border border-yellow-700">
+          <span className="px-2 py-1 bg-warning-background text-warning text-xs font-medium rounded-full border border-warning">
             Pending Review
           </span>
         </div>
@@ -112,7 +112,7 @@ export default function AdminJobCard({ job, onJobUpdate }: AdminJobCardProps) {
         <button
           onClick={() => handleStatusUpdate('approved')}
           disabled={isLoading}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-success text-success-foreground rounded-lg hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Check size={16} />
           {isLoading ? 'Processing...' : 'Approve'}
@@ -120,7 +120,7 @@ export default function AdminJobCard({ job, onJobUpdate }: AdminJobCardProps) {
         <button
           onClick={() => handleStatusUpdate('rejected')}
           disabled={isLoading}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-error text-error-foreground rounded-lg hover:bg-error/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <X size={16} />
           {isLoading ? 'Processing...' : 'Reject'}

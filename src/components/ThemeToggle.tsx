@@ -4,8 +4,15 @@ import { useTheme } from './ThemeProvider'
 import { Sun, Moon } from 'lucide-react'
 
 export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme()
+  const { theme, toggleTheme, isHydrated } = useTheme()
 
+  // THE GATE: If we're on the server or the client hasn't hydrated yet,
+  // return null so there's no icon to flash from.
+  if (!isHydrated) {
+    return null;
+  }
+
+  // Once hydrated, this code will run and render the correct icon instantly.
   return (
     <button
       onClick={toggleTheme}

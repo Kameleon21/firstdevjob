@@ -32,26 +32,26 @@ export default function Toast({ message, type, isVisible, onClose, duration = 50
   const getIcon = () => {
     switch (type) {
       case 'success':
-        return <CheckCircle className="w-5 h-5 text-green-400" />
+        return <CheckCircle className="w-5 h-5 text-success" />
       case 'error':
-        return <AlertCircle className="w-5 h-5 text-red-400" />
+        return <AlertCircle className="w-5 h-5 text-error" />
       case 'info':
-        return <Info className="w-5 h-5 text-blue-400" />
+        return <Info className="w-5 h-5 text-info" />
       default:
-        return <Info className="w-5 h-5 text-blue-400" />
+        return <Info className="w-5 h-5 text-info" />
     }
   }
 
   const getBgColor = () => {
     switch (type) {
       case 'success':
-        return 'bg-green-900 border-green-700'
+        return 'bg-success-background border-success'
       case 'error':
-        return 'bg-red-900 border-red-700'
+        return 'bg-error-background border-error'
       case 'info':
-        return 'bg-blue-900 border-blue-700'
+        return 'bg-info-background border-info'
       default:
-        return 'bg-gray-900 border-gray-700'
+        return 'bg-muted border-border'
     }
   }
 
@@ -69,13 +69,13 @@ export default function Toast({ message, type, isVisible, onClose, duration = 50
             {getIcon()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-white leading-relaxed">
+            <p className="text-sm text-foreground leading-relaxed">
               {message}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="flex-shrink-0 text-gray-400 hover:text-white transition-colors ml-2"
+            className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors ml-2"
           >
             <X size={16} />
           </button>

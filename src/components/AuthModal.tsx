@@ -134,11 +134,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   // Success state
   if (showSuccess) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-background rounded-2xl border border-border w-full max-w-md mx-auto">
           <div className="p-8 text-center">
             <div className="mb-6">
-              <CheckCircle className="w-16 h-16 text-green-400 mx-auto" />
+              <CheckCircle className="w-16 h-16 text-success mx-auto" />
             </div>
             <h2 className="text-2xl font-semibold text-foreground mb-4">
               {isForgotPassword ? 'Email Sent!' : isSignUp ? 'Account Created!' : 'Success!'}
@@ -159,7 +159,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-background rounded-2xl border border-border w-full max-w-md mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border">
@@ -197,8 +197,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
               {/* Error Message */}
               {error && (
-                <div className="mb-4 p-3 bg-red-900 border border-red-700 rounded-lg">
-                  <p className="text-red-300 text-sm">{error}</p>
+                <div className="mb-4 p-3 bg-error-background border border-error rounded-lg">
+                  <p className="text-error text-sm">{error}</p>
                 </div>
               )}
 
@@ -265,8 +265,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
               {/* Error Message */}
               {error && (
-                <div className="mb-4 p-3 bg-red-900 border border-red-700 rounded-lg">
-                  <p className="text-red-300 text-sm">{error}</p>
+                <div className="mb-4 p-3 bg-error-background border border-error rounded-lg">
+                  <p className="text-error text-sm">{error}</p>
                 </div>
               )}
 

@@ -95,7 +95,7 @@ const ProfilePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white">
+      <div className="min-h-screen bg-background text-foreground">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
           <div className="animate-pulse">
             <div className="h-6 sm:h-8 bg-muted rounded w-1/4 mb-6 sm:mb-8"></div>
@@ -113,9 +113,9 @@ const ProfilePage: React.FC = () => {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-          <div className="bg-red-900 border border-red-700 rounded-xl p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold text-red-300 mb-2">Error</h2>
-            <p className="text-sm sm:text-base text-red-200">{error}</p>
+          <div className="bg-error-background border border-error rounded-xl p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-semibold text-error mb-2">Error</h2>
+            <p className="text-sm sm:text-base text-error">{error}</p>
           </div>
         </div>
       </div>
@@ -263,14 +263,14 @@ const ProfilePage: React.FC = () => {
         </form>
       </div>
 
-      <div className="bg-background border border-red-500/30 rounded-xl p-4 sm:p-6">
-        <h3 className="text-lg sm:text-xl font-semibold text-red-400 mb-2">Delete Account</h3>
+      <div className="bg-background border border-error/30 rounded-xl p-4 sm:p-6">
+        <h3 className="text-lg sm:text-xl font-semibold text-error mb-2">Delete Account</h3>
         <p className="text-sm text-muted-foreground mb-4">
           This action is irreversible. All your data, including tracked applications and jobs, will be permanently deleted.
         </p>
         <button
           onClick={() => setShowDeleteConfirm(true)}
-          className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+          className="px-4 py-2 bg-error text-error-foreground text-sm rounded-lg hover:bg-error/90 transition-colors"
         >
           <Trash2 size={16} className="mr-2 inline-block" />
           Delete My Account
@@ -280,7 +280,7 @@ const ProfilePage: React.FC = () => {
   )
 
   const deleteConfirmationModal = (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-background rounded-2xl border border-border w-full max-w-md mx-auto p-6">
         <h2 className="text-xl font-bold text-foreground mb-4">Are you absolutely sure?</h2>
         <p className="text-muted-foreground mb-6">
@@ -295,7 +295,7 @@ const ProfilePage: React.FC = () => {
           </button>
           <button
             onClick={handleDeleteAccount}
-            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="px-6 py-2 bg-error text-error-foreground rounded-lg hover:bg-error/90 transition-colors"
           >
             Yes, delete my account
           </button>

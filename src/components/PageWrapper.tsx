@@ -46,7 +46,7 @@ export default function PageWrapper({ initialJobs, allTags }: PageWrapperProps) 
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background">
       <Header onPostJobClick={handleOpenPostJobModal} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         <HeroSection 
