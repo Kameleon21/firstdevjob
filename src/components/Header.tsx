@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BarChart3, Plus, Menu, X, User, LogOut } from 'lucide-react';
+import { Home, BarChart3, Plus, Menu, X, User, LogOut, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from './AuthModal';
@@ -82,7 +82,6 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
 
           {/* Auth Section */}
           <div className="flex items-center space-x-4">
-            <ThemeToggle />
             {loading ? (
               <div className="hidden md:block w-20 h-10 bg-muted rounded-lg animate-pulse"></div>
             ) : isAuthenticated ? (
@@ -105,6 +104,7 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                   >
                     <User size={20} />
                   </Link>
+                  <ThemeToggle />
                   <button
                     onClick={handleSignOut}
                     className="p-2 text-muted-foreground hover:text-foreground rounded-lg transition-colors"
@@ -115,12 +115,15 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                 </div>
               </div>
             ) : (
-              <button
-                onClick={() => setAuthModalOpen(true)}
-                className="hidden md:inline-flex px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
-              >
-                Sign In
-              </button>
+              <div className="flex items-center space-x-4">
+                <ThemeToggle />
+                <button
+                  onClick={() => setAuthModalOpen(true)}
+                  className="hidden md:inline-flex px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
+                >
+                  Sign In
+                </button>
+              </div>
             )}
 
             {/* Mobile Menu Button */}
@@ -177,11 +180,6 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               Post Job
             </button>
 
-            <div className="flex items-center w-full px-4 py-2">
-              <span className="text-muted-foreground mr-3">Theme:</span>
-              <ThemeToggle />
-            </div>
-
             {!loading && isAuthenticated && (
               <Link
                 href="/profile"
@@ -196,6 +194,32 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
                 Profile
               </Link>
             )}
+
+            <button
+              onClick={() => {
+                // We need to access the toggleTheme function from the ThemeToggle component
+                // For now, let's create a simple theme toggle handler
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                toggleMobileMenu();
+              }}
+              className="flex items-center w-full px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <div className="mr-3">
+                {/* Show theme icon directly aligned with other icons */}
+                <div className="relative">
+                  <Sun className={`h-5 w-5 transition-all duration-300 ease-in-out ${
+                    typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark' ? 'rotate-90 scale-0' : 'rotate-0 scale-100'
+                  }`} />
+                  <Moon className={`absolute top-0 left-0 h-5 w-5 transition-all duration-300 ease-in-out ${
+                    typeof window !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark' ? 'rotate-0 scale-100' : '-rotate-90 scale-0'
+                  }`} />
+                </div>
+              </div>
+              <span>Theme</span>
+            </button>
 
             {loading ? (
               <div className="mx-4 h-12 bg-muted rounded-lg animate-pulse"></div>
