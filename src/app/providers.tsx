@@ -2,6 +2,7 @@
 
 import { SWRConfig } from 'swr'
 import { ReactNode } from 'react'
+import ThemeProvider from '@/components/ThemeProvider'
 
 // Type for SWR keys that can be strings or arrays
 type SWRKey = string | [string, ...unknown[]]
@@ -48,7 +49,7 @@ export default function Providers({ children }: ProvidersProps) {
         refreshInterval: 0, // Only refresh on explicit user action
       }}
     >
-      {children}
+      <ThemeProvider>{children}</ThemeProvider>
     </SWRConfig>
   )
 } 
