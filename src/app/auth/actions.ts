@@ -4,6 +4,27 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
+// Utility function to get the correct site URL with proper fallback logic
+function getSiteURL(): string {
+  // Helper function to check if a value is valid (not empty or whitespace-only)
+  const isValidUrl = (value: string | undefined): boolean => {
+    return value != null && value.trim().length > 0
+  }
+  
+  let url =
+    (isValidUrl(process?.env?.NEXT_PUBLIC_SITE_URL) ? process.env.NEXT_PUBLIC_SITE_URL : null) ??
+    (isValidUrl(process?.env?.NEXT_PUBLIC_VERCEL_URL) ? process.env.NEXT_PUBLIC_VERCEL_URL : null) ??
+    'http://localhost:3000/'
+  
+  // Make sure to include `https://` when not localhost.
+  url = url.startsWith('http') ? url : `https://${url}`
+  
+  // Make sure to include a trailing `/`.
+  url = url.endsWith('/') ? url : `${url}/`
+  
+  return url
+}
+
 export async function emailLogin(formData: FormData) {
   const supabase = await createClient()
 
@@ -50,7 +71,7 @@ export async function resetPassword(formData: FormData) {
   const email = formData.get('email') as string
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/reset-password`,
+    redirectTo: `${getSiteURL()}auth/reset-password`,
   })
 
   if (error) {
@@ -70,22 +91,10 @@ export async function signOut() {
 export async function oauthSignIn(provider: 'google' | 'github') {
   const supabase = await createClient()
   
-  const getURL = () => {
-    let url =
-      process?.env?.NEXT_PUBLIC_SITE_URL ?? // Set this to your site URL in production env.
-      process?.env?.NEXT_PUBLIC_VERCEL_URL ?? // Automatically set by Vercel.
-      'http://localhost:3000/'
-    // Make sure to include `https://` when not localhost.
-    url = url.startsWith('http') ? url : `https://${url}`
-    // Make sure to include a trailing `/`.
-    url = url.endsWith('/') ? url : `${url}/`
-    return url
-  }
-
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: `${getURL()}auth/callback`,
+      redirectTo: `${getSiteURL()}auth/callback`,
     },
   })
 
