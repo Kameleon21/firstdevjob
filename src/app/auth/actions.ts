@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { categorizeOAuthError, logAuthError } from '@/lib/auth/errorHandling'
 
 // Utility function to get the correct site URL with proper fallback logic
 function getSiteURL(): string {
@@ -99,10 +100,28 @@ export async function oauthSignIn(provider: 'google' | 'github') {
   })
 
   if (error) {
-    redirect('/auth/login?message=Error with OAuth provider')
+    // Use environment-aware error handling
+    const errorMessage = typeof error === 'object' && error && 'message' in error 
+      ? String(error.message) 
+      : 'OAuth error';
+    const errorObj = new Error(errorMessage);
+    const categorizedError = categorizeOAuthError(errorObj, provider);
+    
+    // Log the error with full details
+    logAuthError({
+      provider,
+      originalError: errorObj,
+      timestamp: new Date(),
+      categorizedError
+    });
+    
+    // Throw the categorized error for the UI to handle
+    throw new Error(categorizedError.userMessage);
   }
 
   if (data.url) {
     redirect(data.url) // use the redirect API for your server framework
+  } else {
+    throw new Error('No authentication URL received. Please try again.')
   }
 } 
