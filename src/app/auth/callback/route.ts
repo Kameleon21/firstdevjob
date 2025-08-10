@@ -42,8 +42,10 @@ export async function GET(request: NextRequest) {
   // Validate and sanitize the redirect path
   const redirectPath = validateRedirectPath(next)
   
-  // Log authentication attempt for monitoring
-  console.log(`OAuth callback received: code=${code ? 'present' : 'missing'}, next=${redirectPath}`)
+  // Log authentication attempt for monitoring (limit verbosity in production)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`OAuth callback received: code=${code ? 'present' : 'missing'}, next=${redirectPath}`)
+  }
   
   // Handle missing or empty code
   if (!code || code.trim() === '') {
@@ -58,17 +60,25 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (error) {
-      console.error('OAuth callback: Code exchange failed:', error.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('OAuth callback: Code exchange failed:', error.message)
+      } else {
+        console.error('OAuth callback: Code exchange failed')
+      }
       return NextResponse.redirect(buildRedirectUrl(origin, '/auth/auth-code-error', request.headers.get('x-forwarded-host') || undefined))
     }
     
     // Log successful authentication
-    console.log('OAuth callback: Authentication successful', {
-      userId: data.user?.id,
-      email: data.user?.email,
-      provider: data.user?.app_metadata?.provider,
-      redirectTo: redirectPath
-    })
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('OAuth callback: Authentication successful', {
+        userId: data.user?.id,
+        email: data.user?.email,
+        provider: data.user?.app_metadata?.provider,
+        redirectTo: redirectPath
+      })
+    } else {
+      console.log('OAuth callback: Authentication successful')
+    }
     
     // Successful authentication - redirect to the intended destination
     const forwardedHost = request.headers.get('x-forwarded-host')
@@ -76,7 +86,11 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     // Handle unexpected errors
-    console.error('OAuth callback: Unexpected error:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('OAuth callback: Unexpected error:', error)
+    } else {
+      console.error('OAuth callback: Unexpected error')
+    }
     return NextResponse.redirect(buildRedirectUrl(origin, '/auth/auth-code-error', request.headers.get('x-forwarded-host') || undefined))
   }
 } 

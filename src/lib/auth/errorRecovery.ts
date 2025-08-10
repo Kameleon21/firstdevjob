@@ -248,8 +248,13 @@ export const executeAutoRetry = async (
   
   // Add jitter to prevent thundering herd
   const jitterDelay = delay + Math.random() * 1000
-  
-  console.log(`Retrying authentication in ${jitterDelay}ms (attempt ${retryCount + 1}/${config.maxAttempts})`)
+
+  // Reduce noisy logs in production
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(
+      `Retrying authentication in ${jitterDelay}ms (attempt ${retryCount + 1}/${config.maxAttempts})`
+    )
+  }
   
   await new Promise(resolve => setTimeout(resolve, jitterDelay))
   

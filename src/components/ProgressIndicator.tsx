@@ -162,7 +162,10 @@ export function LoadingProgress({
       )}
       <div className="w-full bg-gray-200 rounded-full h-2">
         {variant === 'indeterminate' ? (
-          <div className={`h-2 ${colorClasses[color]} rounded-full animate-pulse`} style={{ width: '30%' }} />
+          <div role="status" aria-live="polite" className="relative">
+            {!label && <span className="sr-only">Loading...</span>}
+            <div className={`h-2 ${colorClasses[color]} rounded-full animate-pulse`} style={{ width: '30%' }} />
+          </div>
         ) : (
           <div 
             className={`h-2 ${colorClasses[color]} rounded-full transition-all duration-300 ease-out`}
