@@ -136,9 +136,7 @@ describe('Auth Actions', () => {
         error: { message: 'OAuth provider error' }
       })
 
-      await oauthSignIn('github')
-
-      expect(mockRedirect).toHaveBeenCalledWith('/auth/login?message=Error with OAuth provider')
+      await expect(oauthSignIn('github')).rejects.toThrow('GitHub login failed. Please try again or use email login.')
     })
 
     it('should support google provider', async () => {
