@@ -9,6 +9,23 @@
 
 FirstDevJob is an open-source job board specifically designed for developers seeking their first role in tech. Built with modern web technologies, it provides a streamlined experience for job seekers to discover opportunities and track their applications, while enabling companies to post entry-level positions.
 
+> Status: v0.5 (Public Beta)
+
+This release focuses on production readiness, robust authentication flows, clear user feedback, and a strong testing foundation to safely onboard the first users.
+
+## 🆕 What's New in v0.5
+
+- Environment‑aware authentication errors with friendly production messages and detailed dev logs
+- Error recovery & auto‑retry for OAuth flows with actionable suggestions
+- Success notifications for email, OAuth, and password flows
+- Progress indicators for sign-in/sign-up steps and loading states
+- Hardened OAuth callback route with safe redirects and strict validation
+- Middleware‑based session management using Supabase SSR utilities
+- Comprehensive test suite: 196 passing tests covering actions, auth flows, components, and search
+- Prod build verified: type-check, lint, and `next build` green
+
+See `docs/DEPLOYMENT.md` for deployment steps and security checklists.
+
 
 ## ✨ Features
 

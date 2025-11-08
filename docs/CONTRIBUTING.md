@@ -23,12 +23,14 @@ git checkout -b feature/your-feature-name
 ### 2. Understanding the Codebase
 
 #### **Key Architectural Patterns**
+
 - **Server Actions** - Replace traditional API routes for data mutations
 - **Row Level Security (RLS)** - Database-level security and access control
 - **Component Composition** - Modular, reusable React components
 - **Type Safety** - Comprehensive TypeScript coverage
 
 #### **Data Flow**
+
 1. **Client** → Server Action → **Supabase** → RLS Policy Check → Database
 2. **Database** → Real-time subscription → **Client** update
 3. **Authentication** → Middleware → Route protection → Component access
@@ -36,6 +38,7 @@ git checkout -b feature/your-feature-name
 ## 📋 Development Workflow
 
 ### Branch Strategy
+
 - **`main`** - Production-ready code
 - **`develop`** - Integration branch for features
 - **`feature/*`** - New features and enhancements
@@ -43,6 +46,7 @@ git checkout -b feature/your-feature-name
 - **`docs/*`** - Documentation updates
 
 ### Commit Convention
+
 We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
@@ -54,6 +58,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 **Types:**
+
 - `feat:` - New features
 - `fix:` - Bug fixes
 - `docs:` - Documentation changes
@@ -63,6 +68,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `chore:` - Maintenance tasks
 
 **Examples:**
+
 ```bash
 feat(auth): add OAuth login with GitHub
 fix(search): resolve tag filtering bug
@@ -84,34 +90,40 @@ refactor(components): extract common loading state
    - Follow coding standards
 
 3. **Before Submitting**
+
    ```bash
    # Run linting
    npm run lint
-   
+
    # Type check
    npx tsc --noEmit
-   
+
    # Build to check for errors
    npm run build
    ```
 
 4. **PR Template**
+
    ```markdown
    ## Description
+
    Brief description of changes
-   
+
    ## Type of Change
+
    - [ ] Bug fix
    - [ ] New feature
    - [ ] Breaking change
    - [ ] Documentation update
-   
+
    ## Testing
+
    - [ ] Tested locally
    - [ ] Added/updated tests
    - [ ] Verified security implications
-   
+
    ## Checklist
+
    - [ ] Code follows style guidelines
    - [ ] Self-review completed
    - [ ] Documentation updated
@@ -123,52 +135,53 @@ refactor(components): extract common loading state
 ### TypeScript Guidelines
 
 #### **Type Definitions**
+
 ```typescript
 // ✅ Good - Explicit interfaces
 interface Job {
-  id: number
-  title: string
-  company: string
-  tags: Tag[]
+  id: number;
+  title: string;
+  company: string;
+  tags: Tag[];
 }
 
 // ❌ Bad - Implicit any
-function processJob(job: any) { }
+function processJob(job: any) {}
 
 // ✅ Good - Proper typing
-function processJob(job: Job): Promise<void> { }
+function processJob(job: Job): Promise<void> {}
 ```
 
 #### **Server Actions**
+
 ```typescript
 // ✅ Good - Proper server action structure
-'use server'
+"use server";
 
-import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 
 export async function createJob(formData: FormData) {
   // Input validation
-  const title = formData.get('title') as string
+  const title = formData.get("title") as string;
   if (!title?.trim()) {
-    throw new Error('Title is required')
+    throw new Error("Title is required");
   }
 
   // Database operation
-  const supabase = await createClient()
-  const { error } = await supabase
-    .from('jobs')
-    .insert({ title: title.trim() })
+  const supabase = await createClient();
+  const { error } = await supabase.from("jobs").insert({ title: title.trim() });
 
-  if (error) throw error
+  if (error) throw error;
 
   // Revalidation
-  revalidatePath('/')
-  return { success: true }
+  revalidatePath("/");
+  return { success: true };
 }
 ```
 
 #### **Component Patterns**
+
 ```typescript
 // ✅ Good - Component structure
 interface JobCardProps {
@@ -201,49 +214,52 @@ export default function JobCard({ job, onBookmark }: JobCardProps) {
 ### React Best Practices
 
 #### **Hooks Usage**
+
 ```typescript
 // ✅ Good - Custom hook for auth
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null)
-        setLoading(false)
-      }
-    )
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
-    return () => subscription.unsubscribe()
-  }, [])
+    return () => subscription.unsubscribe();
+  }, []);
 
-  return { user, loading, isAuthenticated: !!user }
+  return { user, loading, isAuthenticated: !!user };
 }
 ```
 
 #### **Error Handling**
+
 ```typescript
 // ✅ Good - Comprehensive error handling
 try {
-  const result = await postJob(formData)
-  setMessage({ type: 'success', text: 'Job posted successfully!' })
+  const result = await postJob(formData);
+  setMessage({ type: "success", text: "Job posted successfully!" });
 } catch (error) {
-  console.error('Job posting error:', error)
-  setMessage({ 
-    type: 'error', 
-    text: error instanceof Error ? error.message : 'Unknown error' 
-  })
+  console.error("Job posting error:", error);
+  setMessage({
+    type: "error",
+    text: error instanceof Error ? error.message : "Unknown error",
+  });
 }
 ```
 
 ### CSS/Styling Guidelines
 
 #### **Tailwind CSS Patterns**
+
 ```tsx
 // ✅ Good - Consistent utility patterns
 <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200">
-  
+
 // ✅ Good - Responsive design
 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
 
@@ -255,6 +271,7 @@ const variants = {
 ```
 
 #### **Accessibility Requirements**
+
 ```tsx
 // ✅ Required - ARIA labels and keyboard navigation
 <button
@@ -287,33 +304,37 @@ const variants = {
 ### Working with Supabase
 
 #### **RLS Policy Development**
+
 ```sql
 -- ✅ Good - Specific, secure policies
-CREATE POLICY "Users can view their own applications" 
-ON tracked_applications 
-FOR SELECT 
+CREATE POLICY "Users can view their own applications"
+ON tracked_applications
+FOR SELECT
 USING (auth.uid() = user_id);
 
 -- ✅ Good - Role-based access
-CREATE POLICY "Moderators can approve jobs" 
-ON jobs 
-FOR UPDATE 
+CREATE POLICY "Moderators can approve jobs"
+ON jobs
+FOR UPDATE
 USING (get_user_role() IN ('moderator', 'admin'))
 WITH CHECK (status IN ('approved', 'rejected'));
 ```
 
 #### **Schema Changes**
+
 - **Always test locally first**
 - **Document changes in `docs/database.md`**
 - **Consider backward compatibility**
 - **Test RLS policies thoroughly**
 
 #### **Query Optimization**
+
 ```typescript
 // ✅ Good - Efficient query with proper relations
 const { data: jobs } = await supabase
-  .from('jobs')
-  .select(`
+  .from("jobs")
+  .select(
+    `
     id,
     title,
     company,
@@ -321,15 +342,17 @@ const { data: jobs } = await supabase
     job_tags (
       tags ( id, name )
     )
-  `)
-  .eq('status', 'approved')
-  .order('created_at', { ascending: false })
-  .limit(20)
+  `,
+  )
+  .eq("status", "approved")
+  .order("created_at", { ascending: false })
+  .limit(20);
 ```
 
 ## 🎯 Feature Development Areas
 
 ### High Priority
+
 1. **Search Enhancements**
    - Fuzzy search implementation
    - Saved search functionality
@@ -341,6 +364,7 @@ const { data: jobs } = await supabase
    - Admin notification preferences
 
 ### Medium Priority
+
 1. **Analytics & Insights**
    - Job view tracking
    - User engagement metrics
@@ -357,6 +381,7 @@ const { data: jobs } = await supabase
    - Export functionality
 
 ### Future Enhancements
+
 1. **Integration Features**
    - Calendar integration
    - Resume parsing
@@ -370,6 +395,7 @@ const { data: jobs } = await supabase
 ## 🧪 Testing Guidelines
 
 ### Manual Testing Checklist
+
 - [ ] **Authentication Flow**
   - Sign up/login with email
   - OAuth providers (Google/GitHub)
@@ -395,6 +421,7 @@ const { data: jobs } = await supabase
   - Touch interactions
 
 ### Security Testing
+
 - [ ] **Authorization**
   - RLS policies enforced
   - Role-based access working
@@ -410,16 +437,19 @@ const { data: jobs } = await supabase
 ## 🚨 Common Pitfalls
 
 ### Database Issues
+
 - **Bypassing RLS**: Never use service client for user operations
 - **Missing Policies**: Ensure all tables have appropriate RLS policies
 - **Query Performance**: Watch for N+1 queries and missing indexes
 
 ### Authentication Problems
+
 - **Client/Server Mismatch**: Use correct Supabase client for context
 - **Session Handling**: Properly handle auth state changes
 - **Middleware Issues**: Ensure middleware doesn't block necessary routes
 
 ### UI/UX Concerns
+
 - **Loading States**: Always provide feedback during async operations
 - **Error Handling**: Show meaningful error messages to users
 - **Accessibility**: Test with keyboard navigation and screen readers
@@ -427,19 +457,23 @@ const { data: jobs } = await supabase
 ## 📞 Getting Help
 
 ### Before Asking for Help
+
 1. **Read existing documentation** thoroughly
 2. **Search closed issues** for similar problems
 3. **Check Supabase docs** for database/auth questions
 4. **Review existing code** for patterns and examples
 
 ### Where to Get Help
+
 - **GitHub Issues** - Bug reports and feature requests
 - **GitHub Discussions** - Questions and general discussion
 - **Code Comments** - Inline documentation and examples
 - **Database Documentation** - `docs/database.md` for schema questions
 
 ### Providing Context
+
 When asking for help, include:
+
 - **Clear problem description**
 - **Steps to reproduce**
 - **Expected vs actual behavior**
@@ -451,9 +485,10 @@ When asking for help, include:
 ## 🎉 Recognition
 
 Contributors will be recognized through:
+
 - **GitHub contributors list**
 - **Release notes mentions**
 - **Community showcases**
 - **Maintainer recommendations**
 
-Thank you for contributing to FirstDevJob and helping developers find their first opportunities in tech! 🚀 
+Thank you for contributing to FirstDevJob and helping developers find their first opportunities in tech! 🚀
