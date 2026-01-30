@@ -44,6 +44,7 @@ jobs:
         run: bun run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL || 'https://dummy.convex.cloud' }}
 
   # Deploy to Vercel (if using Vercel)
   deploy-vercel:
