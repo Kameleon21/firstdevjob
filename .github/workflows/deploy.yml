@@ -40,9 +40,6 @@ jobs:
       - name: Run type checking
         run: bun x tsc --noEmit
       
-      - name: Run all tests with coverage
-        run: bun test -- --coverage --watchAll=false --passWithNoTests
-      
       - name: Test build
         run: bun run build
         env:

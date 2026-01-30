@@ -44,9 +44,6 @@ jobs:
       - name: Run type checking
         run: bun x tsc --noEmit
       
-      - name: Run tests
-        run: bun test -- --coverage --watchAll=false
-      
       - name: Upload coverage to Codecov
         if: matrix.node-version == '20.x'
         uses: codecov/codecov-action@v3

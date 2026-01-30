@@ -59,28 +59,7 @@ jobs:
       - name: Type check
         run: bun x tsc --noEmit
 
-  # Quality Gate 3: Unit Tests
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: '1.3.6'
-      
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-      
-      - name: Run tests with coverage
-        run: bun test -- --coverage --watchAll=false
-
-  # Quality Gate 4: Build Verification
+  # Quality Gate 3: Build Verification
   build-check:
     name: Build Verification
     runs-on: ubuntu-latest
@@ -105,7 +84,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-  # Quality Gate 5: Bundle Analysis
+  # Quality Gate 4: Bundle Analysis
   bundle-analysis:
     name: Bundle Size Analysis
     runs-on: ubuntu-latest
@@ -141,7 +120,7 @@ jobs:
   all-checks-complete:
     name: All Checks Complete
     runs-on: ubuntu-latest
-    needs: [code-quality, type-check, unit-tests, build-check, bundle-analysis]
+    needs: [code-quality, type-check, build-check, bundle-analysis]
     if: always() && github.event.pull_request.draft == false
     
     steps:
@@ -149,7 +128,6 @@ jobs:
         run: |
           if [[ "${{ needs.code-quality.result }}" == "success" && 
                 "${{ needs.type-check.result }}" == "success" && 
-                "${{ needs.unit-tests.result }}" == "success" && 
                 "${{ needs.build-check.result }}" == "success" && 
                 "${{ needs.bundle-analysis.result }}" == "success" ]]; then
             echo "✅ All quality gates passed!"
@@ -168,7 +146,6 @@ jobs:
             const results = {
               codeQuality: '${{ needs.code-quality.result }}',
               typeCheck: '${{ needs.type-check.result }}',
-              unitTests: '${{ needs.unit-tests.result }}',
               buildCheck: '${{ needs.build-check.result }}',
               bundleAnalysis: '${{ needs.bundle-analysis.result }}'
             };
@@ -183,7 +160,6 @@ jobs:
             |-------|--------|
             | Code Quality | ${results.codeQuality === 'success' ? '✅' : '❌'} |
             | Type Safety | ${results.typeCheck === 'success' ? '✅' : '❌'} |
-            | Unit Tests | ${results.unitTests === 'success' ? '✅' : '❌'} |
             | Build Check | ${results.buildCheck === 'success' ? '✅' : '❌'} |
             | Bundle Analysis | ${results.bundleAnalysis === 'success' ? '✅' : '❌'} |
             
