@@ -27,17 +27,16 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20.x'
-          cache: 'npm'
+          bun-version: '1.3.6'
       
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
       
       - name: Run ESLint
-        run: npm run lint
+        run: bun run lint
 
   # Quality Gate 2: Type Safety
   type-check:
@@ -49,17 +48,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20.x'
-          cache: 'npm'
+          bun-version: '1.3.6'
       
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
       
       - name: Type check
-        run: npx tsc --noEmit
+        run: bun x tsc --noEmit
 
   # Quality Gate 3: Unit Tests
   unit-tests:
@@ -71,17 +69,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20.x'
-          cache: 'npm'
+          bun-version: '1.3.6'
       
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
       
       - name: Run tests with coverage
-        run: npm test -- --coverage --watchAll=false
+        run: bun test -- --coverage --watchAll=false
 
   # Quality Gate 4: Build Verification
   build-check:
@@ -93,17 +90,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20.x'
-          cache: 'npm'
+          bun-version: '1.3.6'
       
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
       
       - name: Build application
-        run: npm run build
+        run: bun run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -119,17 +115,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20.x'
-          cache: 'npm'
+          bun-version: '1.3.6'
       
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
       
       - name: Build and analyze bundle
-        run: npm run build
+        run: bun run build
         env:
           ANALYZE: true
           NEXT_TELEMETRY_DISABLED: 1
