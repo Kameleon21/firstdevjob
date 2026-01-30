@@ -1,28 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import useSWR from 'swr'
+import { useState, useEffect, useMemo } from 'react'
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import JobSearch from './JobSearch'
 import JobCard from './JobCard'
-import { searchJobs } from '@/app/actions/search'
-
-interface Job {
-  id: number;
-  created_at: string;
-  title: string;
-  company: string;
-  location: string;
-  url: string;
-  status: 'pending' | 'approved' | 'rejected';
-  tags: { id: number; name: string }[];
-}
 
 interface JobSearchWrapperProps {
-  initialJobs: Job[]
   allTags: string[]
 }
 
-export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrapperProps) {
+export default function JobSearchWrapper({ allTags }: JobSearchWrapperProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -37,23 +25,15 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  // Create dynamic SWR key based on search parameters
-  const swrKey = ['jobs', debouncedSearchQuery, selectedTags.sort().join(',')]
+  const sortedSelectedTags = useMemo(() => [...selectedTags].sort(), [selectedTags])
+  const jobs = useQuery(api.jobs.listApprovedJobs, {
+    searchTerm: debouncedSearchQuery.trim() || undefined,
+    selectedTags: sortedSelectedTags.length > 0 ? sortedSelectedTags : undefined,
+  })
 
-  // Use SWR to fetch jobs with server-side filtering
-  const { data: jobs, error, isLoading, isValidating } = useSWR(
-    swrKey,
-    async () => await searchJobs(debouncedSearchQuery, selectedTags),
-    {
-      fallbackData: initialJobs, // Use initial jobs as fallback
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      keepPreviousData: true, // Keep previous data visible while fetching new data
-    }
-  )
-
-  // Use SWR data if available, otherwise fall back to initial jobs
-  const filteredJobs = jobs || initialJobs
+  const isLoading = jobs === undefined
+  const error = null as Error | null
+  const filteredJobs = jobs ?? []
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query)
@@ -73,7 +53,7 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
   }
 
   const hasActiveFilters = searchQuery.trim() !== '' || selectedTags.length > 0
-  const isSearching = searchQuery !== debouncedSearchQuery || isValidating
+  const isSearching = searchQuery !== debouncedSearchQuery || isLoading
 
   return (
     <div className="space-y-12">
@@ -179,12 +159,12 @@ export default function JobSearchWrapper({ initialJobs, allTags }: JobSearchWrap
           </div>
         ) : !error && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-            {filteredJobs.map((job) => (
-              <JobCard 
-                key={job.id} 
-                job={job} 
-                searchQuery={debouncedSearchQuery}
-              />
+             {filteredJobs.map((job) => (
+               <JobCard 
+                 key={job._id} 
+                 job={job} 
+                 searchQuery={debouncedSearchQuery}
+               />
             ))}
           </div>
         )}
