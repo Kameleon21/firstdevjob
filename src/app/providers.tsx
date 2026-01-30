@@ -1,7 +1,8 @@
 'use client'
 
 import { SWRConfig } from 'swr'
-import { ReactNode } from 'react'
+import { ReactNode, useMemo } from 'react'
+import { ConvexProvider, ConvexReactClient } from 'convex/react'
 import ThemeProvider from '@/components/ThemeProvider'
 
 // Type for SWR keys that can be strings or arrays
@@ -32,24 +33,33 @@ interface ProvidersProps {
 }
 
 export default function Providers({ children }: ProvidersProps) {
+  const convex = useMemo(() => {
+    if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+      throw new Error('Missing NEXT_PUBLIC_CONVEX_URL environment variable')
+    }
+    return new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL)
+  }, [])
+
   return (
-    <SWRConfig
-      value={{
-        fetcher,
-        // Cache data for 30 seconds by default
-        dedupingInterval: 30000,
-        // Revalidate on focus for better UX
-        revalidateOnFocus: true,
-        // Don't revalidate on reconnect to avoid unnecessary requests
-        revalidateOnReconnect: false,
-        // Retry on error with exponential backoff
-        errorRetryCount: 3,
-        errorRetryInterval: 1000,
-        // Keep data fresh for 5 minutes
-        refreshInterval: 0, // Only refresh on explicit user action
-      }}
-    >
-      <ThemeProvider>{children}</ThemeProvider>
-    </SWRConfig>
+    <ConvexProvider client={convex}>
+      <SWRConfig
+        value={{
+          fetcher,
+          // Cache data for 30 seconds by default
+          dedupingInterval: 30000,
+          // Revalidate on focus for better UX
+          revalidateOnFocus: true,
+          // Don't revalidate on reconnect to avoid unnecessary requests
+          revalidateOnReconnect: false,
+          // Retry on error with exponential backoff
+          errorRetryCount: 3,
+          errorRetryInterval: 1000,
+          // Keep data fresh for 5 minutes
+          refreshInterval: 0, // Only refresh on explicit user action
+        }}
+      >
+        <ThemeProvider>{children}</ThemeProvider>
+      </SWRConfig>
+    </ConvexProvider>
   )
-} 
+}

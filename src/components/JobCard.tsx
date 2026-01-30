@@ -1,20 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { toggleBookmark, getBookmarkStatus } from '@/app/actions/bookmarks'
-import AuthModal from './AuthModal'
 import { highlightText } from '@/lib/textHighlight'
 
 interface Job {
-  id: number;
-  created_at: string;
+  _id: string;
+  _creationTime: number;
   title: string;
   company: string;
-  location: string;
-  url: string;
+  location?: string;
+  url?: string;
   status: 'pending' | 'approved' | 'rejected';
-  tags: { id: number; name: string }[];
+  tags?: string[];
 }
 
 interface JobCardProps {
@@ -23,45 +19,9 @@ interface JobCardProps {
 }
 
 export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
-  const [isBookmarked, setIsBookmarked] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [showAuthModal, setShowAuthModal] = useState(false)
-  const { isAuthenticated, loading: authLoading } = useAuth()
-
-  // Check bookmark status on mount and when auth state changes
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      const checkBookmarkStatus = async () => {
-        try {
-          const { bookmarked } = await getBookmarkStatus(job.id)
-          setIsBookmarked(bookmarked)
-        } catch (error) {
-          console.error('Error checking bookmark status:', error)
-        }
-      }
-      checkBookmarkStatus()
-    } else if (!authLoading && !isAuthenticated) {
-      setIsBookmarked(false)
-    }
-  }, [job.id, isAuthenticated, authLoading])
-
-  const handleBookmarkClick = async () => {
-    if (!isAuthenticated) {
-      setShowAuthModal(true)
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const result = await toggleBookmark(job.id)
-      setIsBookmarked(result.bookmarked)
-    } catch (error) {
-      console.error('Error toggling bookmark:', error)
-      alert('Failed to update bookmark. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const jobTags = job.tags ?? []
+  const jobLocation = job.location ?? ''
+  const jobUrl = job.url ?? '#'
 
   return (
     <div className="bg-background border border-border rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:border-primary">
@@ -70,19 +30,13 @@ export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
         <h3 className="text-xl font-semibold text-foreground pr-4">
           {highlightText(job.title, searchQuery, '', 'var(--highlight-background)', 'var(--highlight-foreground)')}
         </h3>
-        <button 
-          onClick={handleBookmarkClick}
-          disabled={isLoading || authLoading}
-          className={`transition-colors duration-200 ${
-            isLoading || authLoading 
-              ? 'text-muted-foreground cursor-not-allowed' 
-              : isBookmarked 
-                ? 'text-accent hover:opacity-80' 
-                : 'text-muted-foreground hover:text-foreground'
-          }`}
-          title={isAuthenticated ? (isBookmarked ? 'Remove bookmark' : 'Bookmark job') : 'Sign in to bookmark'}
+        <button
+          type="button"
+          disabled
+          className="text-muted-foreground cursor-not-allowed"
+          title="Bookmarks are temporarily disabled during migration"
         >
-          <svg className="w-5 h-5" fill={isBookmarked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
         </button>
@@ -105,7 +59,7 @@ export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         <span className="text-muted-foreground">
-          {highlightText(job.location, searchQuery, '', 'var(--highlight-background)', 'var(--highlight-foreground)')}
+          {highlightText(jobLocation, searchQuery, '', 'var(--highlight-background)', 'var(--highlight-foreground)')}
         </span>
       </div>
 
@@ -115,7 +69,7 @@ export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
         <span className="text-muted-foreground">
-          {new Date(job.created_at).toLocaleDateString('en-US', { 
+          {new Date(job._creationTime).toLocaleDateString('en-US', { 
             year: 'numeric', 
             month: 'short', 
             day: 'numeric' 
@@ -124,14 +78,14 @@ export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
       </div>
 
       {/* Tags */}
-      {job.tags && job.tags.length > 0 && (
+      {jobTags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6">
-          {job.tags.map((tag) => (
+          {jobTags.map((tag) => (
             <span
-              key={tag.id}
+              key={tag}
               className="bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm font-medium border border-primary"
             >
-              {tag.name}
+              {tag}
             </span>
           ))}
         </div>
@@ -140,7 +94,7 @@ export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
       {/* Apply button */}
       <div className="pt-2 flex justify-start">
         <a
-          href={job.url}
+          href={jobUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="bg-primary hover:bg-primary-hover text-primary-foreground px-6 py-3 rounded-lg text-sm font-medium transition-colors duration-200 inline-block text-center"
@@ -148,12 +102,6 @@ export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
           Apply Now
         </a>
       </div>
-      
-      {/* Auth Modal */}
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
-      />
     </div>
   );
-} 
+}
