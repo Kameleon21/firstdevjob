@@ -1,7 +1,7 @@
 'use client'
 
 import { SWRConfig } from 'swr'
-import { ReactNode } from 'react'
+import { ReactNode, useMemo } from 'react'
 import { ConvexProvider, ConvexReactClient } from 'convex/react'
 import ThemeProvider from '@/components/ThemeProvider'
 
@@ -32,9 +32,14 @@ interface ProvidersProps {
   children: ReactNode
 }
 
-const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
-
 export default function Providers({ children }: ProvidersProps) {
+  const convex = useMemo(() => {
+    if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+      throw new Error('Missing NEXT_PUBLIC_CONVEX_URL environment variable')
+    }
+    return new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL)
+  }, [])
+
   return (
     <ConvexProvider client={convex}>
       <SWRConfig
