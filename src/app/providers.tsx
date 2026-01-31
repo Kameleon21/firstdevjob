@@ -1,47 +1,49 @@
-'use client'
+"use client";
 
-import { SWRConfig } from 'swr'
-import { ReactNode, useMemo } from 'react'
-import { ConvexProvider, ConvexReactClient } from 'convex/react'
-import ThemeProvider from '@/components/ThemeProvider'
+import { SWRConfig } from "swr";
+import { ReactNode, useMemo } from "react";
+import { ConvexReactClient } from "convex/react";
+import ThemeProvider from "@/components/ThemeProvider";
+import { ConvexProviderWithClerk } from "convex/react-clerk";
+import { useAuth } from "@clerk/nextjs";
 
 // Type for SWR keys that can be strings or arrays
-type SWRKey = string | [string, ...unknown[]]
+type SWRKey = string | [string, ...unknown[]];
 
 // Default fetcher function that works with server actions
 const fetcher = async (key: SWRKey) => {
   // Handle different key formats for SWR
-  if (typeof key === 'string') {
+  if (typeof key === "string") {
     // For regular API routes
-    const response = await fetch(key)
+    const response = await fetch(key);
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.json()
+    return response.json();
   }
-  
+
   // For server actions - key format: [actionName, ...args]
-  const [actionName] = key
-  
+  const [actionName] = key;
+
   // This will be dynamically handled by the components
   // Each component will pass the server action function directly
-  throw new Error(`Server action fetcher not implemented for: ${actionName}`)
-}
+  throw new Error(`Server action fetcher not implemented for: ${actionName}`);
+};
 
 interface ProvidersProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export default function Providers({ children }: ProvidersProps) {
   const convex = useMemo(() => {
     if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
-      throw new Error('Missing NEXT_PUBLIC_CONVEX_URL environment variable')
+      throw new Error("Missing NEXT_PUBLIC_CONVEX_URL environment variable");
     }
-    return new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL)
-  }, [])
+    return new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL);
+  }, []);
 
   return (
-    <ConvexProvider client={convex}>
+    <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
       <SWRConfig
         value={{
           fetcher,
@@ -60,6 +62,6 @@ export default function Providers({ children }: ProvidersProps) {
       >
         <ThemeProvider>{children}</ThemeProvider>
       </SWRConfig>
-    </ConvexProvider>
-  )
+    </ConvexProviderWithClerk>
+  );
 }

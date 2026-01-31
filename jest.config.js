@@ -23,7 +23,7 @@ const config = {
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",
     "!src/**/*.d.ts",
-    "!src/middleware.ts", // Next.js middleware
+    "!src/proxy.ts", // Next.js middleware
     "!src/**/layout.{ts,tsx}",
     "!src/**/loading.{ts,tsx}",
     "!src/**/error.{ts,tsx}",
