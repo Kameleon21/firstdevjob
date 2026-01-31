@@ -52,6 +52,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Get Clerk publishable key - may be undefined during build
+  const clerkPubKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning={true}>
       <head>
@@ -89,11 +92,15 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <ClerkProvider appearance={clerkAppearance}>
-          <ConvexClientProvider>
-            <ThemeProvider>{children}</ThemeProvider>
-          </ConvexClientProvider>
-        </ClerkProvider>
+        {clerkPubKey ? (
+          <ClerkProvider appearance={clerkAppearance}>
+            <ConvexClientProvider>
+              <ThemeProvider>{children}</ThemeProvider>
+            </ConvexClientProvider>
+          </ClerkProvider>
+        ) : (
+          <ThemeProvider>{children}</ThemeProvider>
+        )}
       </body>
     </html>
   );
