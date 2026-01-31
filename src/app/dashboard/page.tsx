@@ -1,43 +1,45 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import useSWR from 'swr'
-import Header from '@/components/Header'
-import DashboardJobCard from '@/components/DashboardJobCard'
-import AdminSection from '@/components/AdminSection'
-import PostJobModal from '@/components/PostJobModal'
-import Toast from '@/components/Toast'
-import { getDashboardData } from '@/app/actions/dashboard'
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import useSWR from "swr";
+import Header from "@/components/Header";
+import DashboardJobCard from "@/components/DashboardJobCard";
+import AdminSection from "@/components/AdminSection";
+import PostJobModal from "@/components/PostJobModal";
+import Toast from "@/components/Toast";
+import { getDashboardData } from "@/app/actions/dashboard";
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const { data, error, isLoading } = useSWR('dashboardData', getDashboardData, {
+  const router = useRouter();
+  const { data, error, isLoading } = useSWR("dashboardData", getDashboardData, {
     onSuccess: (data) => {
       if (!data.user) {
-        router.push('/auth/login?message=Please sign in to view your dashboard')
+        router.push(
+          "/auth/login?message=Please sign in to view your dashboard",
+        );
       }
     },
     revalidateOnFocus: false,
-  })
+  });
 
-  const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false)
-  const [showToast, setShowToast] = useState(false)
-  const [toastMessage, setToastMessage] = useState('')
+  const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   const handleOpenPostJobModal = () => {
-    setIsPostJobModalOpen(true)
-  }
+    setIsPostJobModalOpen(true);
+  };
 
   const handleClosePostJobModal = () => {
-    setIsPostJobModalOpen(false)
-  }
+    setIsPostJobModalOpen(false);
+  };
 
   const handleJobPostSuccess = (message: string) => {
-    setToastMessage(message)
-    setShowToast(true)
-  }
+    setToastMessage(message);
+    setShowToast(true);
+  };
 
   if (isLoading) {
     return (
@@ -54,7 +56,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !data) {
@@ -63,7 +65,9 @@ export default function DashboardPage() {
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
           <div className="text-center py-16">
-            <h2 className="text-2xl font-semibold text-foreground mb-4">Could not load dashboard data.</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">
+              Could not load dashboard data.
+            </h2>
             <button
               onClick={() => window.location.reload()}
               className="inline-flex px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
@@ -73,19 +77,22 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
-  const { bookmarks, userRole, pendingJobs, allTags } = data
+  const { bookmarks, userRole, pendingJobs, allTags } = data;
 
   return (
     <div className="min-h-screen bg-background">
       <Header onPostJobClick={handleOpenPostJobModal} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Your Dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            Your Dashboard
+          </h1>
           <p className="text-muted-foreground">
-            Track your job applications and update their status as you progress through the hiring process.
+            Track your job applications and update their status as you progress
+            through the hiring process.
           </p>
         </div>
 
@@ -96,15 +103,26 @@ export default function DashboardPage() {
           <div className="text-center py-16">
             <div className="bg-background border border-border rounded-2xl shadow-xl p-12 max-w-md mx-auto">
               <div className="mb-6">
-                <svg className="w-16 h-16 text-accent mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                <svg
+                  className="w-16 h-16 text-accent mx-auto mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                  />
                 </svg>
               </div>
               <h3 className="text-2xl font-semibold text-foreground mb-4">
                 No Bookmarked Jobs
               </h3>
               <p className="text-muted-foreground text-base mb-6">
-                Start bookmarking jobs you&apos;re interested in to track your application progress here.
+                Start bookmarking jobs you&apos;re interested in to track your
+                application progress here.
               </p>
               <Link
                 href="/"
@@ -121,16 +139,14 @@ export default function DashboardPage() {
                 Tracked Applications
               </h2>
               <p className="text-muted-foreground text-sm">
-                You have {bookmarks.length} job{bookmarks.length !== 1 ? 's' : ''} in your tracker
+                You have {bookmarks.length} job
+                {bookmarks.length !== 1 ? "s" : ""} in your tracker
               </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {bookmarks.map((bookmark) => (
-                <DashboardJobCard 
-                  key={bookmark.id} 
-                  bookmark={bookmark} 
-                />
+                <DashboardJobCard key={bookmark.id} bookmark={bookmark} />
               ))}
             </div>
           </>
@@ -154,5 +170,6 @@ export default function DashboardPage() {
         duration={8000}
       />
     </div>
-  )
-} 
+  );
+}
+

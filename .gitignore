@@ -43,6 +43,5 @@ next-env.d.ts
 # cursor
 .cursor/
 
-CLAUDE.md
-
 .mcp.json
+
