@@ -1,23 +1,34 @@
-'use client'
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, BarChart3, Plus, Menu, X, User, LogOut, Sun, Moon } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { createClient } from '@/lib/supabase/client';
-import AuthModal from './AuthModal';
-import { ThemeToggle } from './ThemeToggle';
-import { useTheme } from './ThemeProvider';
+import React, { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Home,
+  BarChart3,
+  Plus,
+  Menu,
+  X,
+  User,
+  LogOut,
+  Sun,
+  Moon,
+} from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import AuthModal from "./AuthModal";
+import { ThemeToggle } from "./ThemeToggle";
+import { useTheme } from "./ThemeProvider";
+import { useClerk } from "@clerk/nextjs";
 
 interface HeaderProps {
-  onPostJobClick?: () => void
+  onPostJobClick?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const { user, isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const { signOut } = useClerk();
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
 
@@ -26,10 +37,9 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
   };
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await signOut();
     // Refresh the page to update the auth state
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   return (
@@ -50,22 +60,22 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
             <Link
               href="/"
               className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                pathname === '/'
-                  ? 'bg-secondary text-secondary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
+                pathname === "/"
+                  ? "bg-secondary text-secondary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <Home size={20} className="mr-2" />
               Jobs
             </Link>
 
-            {!loading && isAuthenticated && (
+            {!isLoading && isAuthenticated && (
               <Link
                 href="/dashboard"
                 className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                  pathname === '/dashboard'
-                    ? 'bg-secondary text-secondary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                  pathname === "/dashboard"
+                    ? "bg-secondary text-secondary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <BarChart3 size={20} className="mr-2" />
@@ -84,23 +94,25 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
 
           {/* Auth Section */}
           <div className="flex items-center space-x-4">
-            {loading ? (
+            {isLoading ? (
               <div className="hidden md:block w-20 h-10 bg-muted rounded-lg animate-pulse"></div>
             ) : isAuthenticated ? (
               <div className="flex items-center space-x-3">
                 <div className="hidden sm:block">
-                  <span className="text-sm text-muted-foreground">Welcome, </span>
+                  <span className="text-sm text-muted-foreground">
+                    Welcome,{" "}
+                  </span>
                   <span className="text-sm font-medium text-foreground">
-                    {user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0]}
+                    {user?.profile?.fullName || user?.email?.split("@")[0]}
                   </span>
                 </div>
                 <div className="hidden md:flex items-center space-x-2">
                   <Link
                     href="/profile"
                     className={`p-2 rounded-lg transition-colors ${
-                      pathname === '/profile'
-                        ? 'bg-secondary text-secondary-foreground'
-                        : 'text-muted-foreground hover:text-foreground'
+                      pathname === "/profile"
+                        ? "bg-secondary text-secondary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                     }`}
                     title="Profile"
                   >
@@ -147,23 +159,23 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               href="/"
               onClick={toggleMobileMenu}
               className={`flex items-center w-full px-4 py-2 transition-colors ${
-                pathname === '/'
-                  ? 'bg-secondary text-secondary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                pathname === "/"
+                  ? "bg-secondary text-secondary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
               <Home size={20} className="mr-3" />
               Jobs
             </Link>
 
-            {!loading && isAuthenticated && (
+            {!isLoading && isAuthenticated && (
               <Link
                 href="/dashboard"
                 onClick={toggleMobileMenu}
                 className={`flex items-center w-full px-4 py-2 transition-colors ${
-                  pathname === '/dashboard'
-                    ? 'bg-secondary text-secondary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  pathname === "/dashboard"
+                    ? "bg-secondary text-secondary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 <BarChart3 size={20} className="mr-3" />
@@ -182,14 +194,14 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               Post Job
             </button>
 
-            {!loading && isAuthenticated && (
+            {!isLoading && isAuthenticated && (
               <Link
                 href="/profile"
                 onClick={toggleMobileMenu}
                 className={`flex items-center w-full px-4 py-2 transition-colors ${
-                  pathname === '/profile'
-                    ? 'bg-secondary text-secondary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  pathname === "/profile"
+                    ? "bg-secondary text-secondary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 <User size={20} className="mr-3" />
@@ -207,18 +219,26 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               <div className="mr-3">
                 {/* Show theme icon directly aligned with other icons */}
                 <div className="relative">
-                  <Sun className={`h-5 w-5 transition-all duration-300 ease-in-out ${
-                    theme === 'dark' ? 'rotate-90 scale-0' : 'rotate-0 scale-100'
-                  }`} />
-                  <Moon className={`absolute top-0 left-0 h-5 w-5 transition-all duration-300 ease-in-out ${
-                    theme === 'dark' ? 'rotate-0 scale-100' : '-rotate-90 scale-0'
-                  }`} />
+                  <Sun
+                    className={`h-5 w-5 transition-all duration-300 ease-in-out ${
+                      theme === "dark"
+                        ? "rotate-90 scale-0"
+                        : "rotate-0 scale-100"
+                    }`}
+                  />
+                  <Moon
+                    className={`absolute top-0 left-0 h-5 w-5 transition-all duration-300 ease-in-out ${
+                      theme === "dark"
+                        ? "rotate-0 scale-100"
+                        : "-rotate-90 scale-0"
+                    }`}
+                  />
                 </div>
               </div>
               <span>Theme</span>
             </button>
 
-            {loading ? (
+            {isLoading ? (
               <div className="mx-4 h-12 bg-muted rounded-lg animate-pulse"></div>
             ) : !isAuthenticated ? (
               <button
@@ -248,12 +268,12 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
       )}
 
       {/* Auth Modal */}
-      <AuthModal 
-        isOpen={authModalOpen} 
-        onClose={() => setAuthModalOpen(false)} 
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
       />
     </header>
   );
 };
 
-export default Header; 
+export default Header;

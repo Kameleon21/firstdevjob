@@ -1,38 +1,37 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import type { User } from '@supabase/supabase-js'
+import { useConvexAuth, useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { useEffect, useRef } from "react";
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const user = useQuery(api.users.currentUser);
+  const ensureProfile = useMutation(api.users.ensureProfile);
+  const hasEnsuredProfile = useRef(false);
 
+  // Ensure profile exists when user authenticates
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      setLoading(false)
+    if (isAuthenticated && !isLoading && !hasEnsuredProfile.current) {
+      hasEnsuredProfile.current = true;
+      ensureProfile().catch((error) => {
+        // Reset flag if it fails so it can retry
+        hasEnsuredProfile.current = false;
+        console.error("Failed to ensure profile:", error);
+      });
     }
+  }, [isAuthenticated, isLoading, ensureProfile]);
 
-    getInitialSession()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-        setLoading(false)
-      }
-    )
-
-    return () => subscription.unsubscribe()
-  }, [supabase.auth])
+  // Reset flag when user signs out
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      hasEnsuredProfile.current = false;
+    }
+  }, [isAuthenticated, isLoading]);
 
   return {
     user,
-    loading,
-    isAuthenticated: !!user,
-  }
-} 
+    isAuthenticated,
+    isLoading: isLoading || user === undefined,
+  };
+}

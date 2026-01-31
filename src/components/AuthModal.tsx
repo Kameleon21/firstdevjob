@@ -1,896 +1,540 @@
-'use client'
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react'
-import { X, Mail, Github, Chrome, Eye, EyeOff, ArrowLeft, CheckCircle, RefreshCw, AlertTriangle, Lightbulb, Check } from 'lucide-react'
-import { oauthSignIn } from '@/app/auth/actions'
-import { createClient } from '@/lib/supabase/client'
-import { categorizeEmailAuthError, isDevelopment } from '@/lib/auth/errorHandling'
-import { 
-  RecoveryStateManager, 
-  RecoveryAction, 
-  calculateRetryDelay,
-  DEFAULT_RETRY_CONFIG
-} from '@/lib/auth/errorRecovery'
-import { 
-  ProgressIndicator, 
-  LoadingProgress, 
-  MiniStepIndicator, 
-  AnimatedDots,
-  type ProgressStep 
-} from './ProgressIndicator'
+import React, { useState, useEffect, useCallback } from "react";
+import { useSignIn, useSignUp, useUser } from "@clerk/nextjs";
+import { X, LogIn, UserPlus, Sparkles, Mail, Lock, Github, Loader2, Eye, EyeOff, User } from "lucide-react";
 
 interface AuthModalProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
+type AuthTab = "signin" | "signup";
+
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [isForgotPassword, setIsForgotPassword] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
-  const [successType, setSuccessType] = useState<'email' | 'oauth' | 'signup'>('email')
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [failedOAuthProvider, setFailedOAuthProvider] = useState<'google' | 'github' | null>(null)
+  const [activeTab, setActiveTab] = useState<AuthTab>("signin");
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
 
-  // Progress tracking states
-  const [oauthProgress, setOauthProgress] = useState<ProgressStep[]>([])
-  const [loadingProgress, setLoadingProgress] = useState(0)
-  const [authFlowStep, setAuthFlowStep] = useState(1)
-  const [showProgressIndicator, setShowProgressIndicator] = useState(false)
+  const { signIn, isLoaded: signInLoaded } = useSignIn();
+  const { signUp, isLoaded: signUpLoaded } = useSignUp();
+  const { isSignedIn } = useUser();
 
-  // Recovery state management
-  const [recoveryManager] = useState(() => new RecoveryStateManager())
-  const [recoverySuggestions, setRecoverySuggestions] = useState<RecoveryAction[]>([])
-  const [isAutoRetrying, setIsAutoRetrying] = useState(false)
-  const [retryCountdown, setRetryCountdown] = useState(0)
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Cleanup on unmount
+  // Reset form when modal opens
   useEffect(() => {
-    return () => {
-      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current)
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current)
+    if (isOpen) {
+      setActiveTab("signin");
+      setIsAnimating(true);
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setError("");
+      setPendingVerification(false);
+      setVerificationCode("");
     }
-  }, [])
+  }, [isOpen]);
 
-  if (!isOpen) return null
+  // Prevent background scrolling and handle escape key
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
 
-  const resetForm = () => {
-    setEmail('')
-    setPassword('')
-    setError('')
-    setShowSuccess(false)
-    setSuccessMessage('')
-    setSuccessType('email')
-    setFailedOAuthProvider(null)
-    setIsForgotPassword(false)
-    setIsSignUp(false)
-    // Reset recovery state
-    setRecoverySuggestions([])
-    setIsAutoRetrying(false)
-    setRetryCountdown(0)
-    recoveryManager.reset()
-    // Reset progress indicators
-    setOauthProgress([])
-    setLoadingProgress(0)
-    setAuthFlowStep(1)
-    setShowProgressIndicator(false)
-    // Clear any pending timeouts
-    if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current)
-    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current)
-  }
-
-  const handleClose = () => {
-    resetForm()
-    onClose()
-  }
-
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
-    
-    const supabase = createClient()
-    
-    try {
-      if (isSignUp) {
-        // Update sign-up progress
-        setAuthFlowStep(1) // Details step active
-        
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-        })
-        
-        if (signUpError) {
-          const categorizedError = categorizeEmailAuthError(signUpError, true);
-          setError(categorizedError.userMessage);
-          
-          // In development, also log debug information
-          if (isDevelopment()) {
-            console.log('Sign-up error details:', categorizedError);
-          }
-          return
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          onClose();
         }
-        
-        // Move to verify step
-        setAuthFlowStep(2)
-        
-        // Success - show success message
-        setShowSuccess(true)
-        setSuccessMessage('Account created successfully! Please check your email to verify your account before signing in.')
-        setSuccessType('signup')
-        
-        // Complete the flow
-        setTimeout(() => setAuthFlowStep(3), 1000)
+      };
+
+      document.addEventListener("keydown", handleEscape);
+
+      return () => {
+        document.body.style.overflow = "unset";
+        document.removeEventListener("keydown", handleEscape);
+      };
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  }, [isOpen, onClose]);
+
+  // Close modal when user signs in successfully
+  useEffect(() => {
+    if (isSignedIn && isOpen) {
+      onClose();
+    }
+  }, [isSignedIn, isOpen, onClose]);
+
+  const handleBackdropClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) {
+        onClose();
+      }
+    },
+    [onClose]
+  );
+
+  const handleTabSwitch = (tab: AuthTab) => {
+    if (tab !== activeTab) {
+      setActiveTab(tab);
+      setError("");
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setPendingVerification(false);
+    }
+  };
+
+  // OAuth sign in (Google/GitHub)
+  const handleOAuthSignIn = async (provider: "oauth_google" | "oauth_github") => {
+    if (!signInLoaded || !signIn) return;
+
+    try {
+      setIsLoading(true);
+      setError("");
+      await signIn.authenticateWithRedirect({
+        strategy: provider,
+        redirectUrl: "/auth/sso-callback",
+        redirectUrlComplete: "/",
+      });
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "OAuth sign in failed";
+      setError(errorMessage);
+      setIsLoading(false);
+    }
+  };
+
+  // Email/password sign in
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signInLoaded || !signIn) return;
+
+    try {
+      setIsLoading(true);
+      setError("");
+
+      const result = await signIn.create({
+        identifier: email,
+        password,
+      });
+
+      if (result.status === "complete") {
+        // Sign in successful - the useEffect will close the modal
+        window.location.reload();
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        
-        if (signInError) {
-          const categorizedError = categorizeEmailAuthError(signInError, false);
-          setError(categorizedError.userMessage);
-          
-          // In development, also log debug information
-          if (isDevelopment()) {
-            console.log('Sign-in error details:', categorizedError);
-          }
-          return
-        }
-        
-        // Success - show success message before closing
-        setShowSuccess(true)
-        setSuccessMessage('Welcome back! You have been successfully signed in.')
-        setSuccessType('email')
-        
-        // Auto-close modal after showing success message
-        setTimeout(() => {
-          handleClose()
-        }, 1500)
+        setError("Sign in incomplete. Please try again.");
       }
-    } catch (err) {
-      console.error('Auth error:', err)
-      setError('An unexpected error occurred. Please try again.')
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: { message: string }[] };
+      const errorMessage = clerkError.errors?.[0]?.message || "Sign in failed. Please check your credentials.";
+      setError(errorMessage);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
-    
-    const supabase = createClient()
-    
+  // Email/password sign up
+  const handleEmailSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signUpLoaded || !signUp) return;
+
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    // Validate password length
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      })
-      
-      if (error) {
-        setError(error.message)
-        return
-      }
-      
-      setShowSuccess(true)
-      setSuccessMessage('Password reset email sent! Please check your inbox and follow the instructions to reset your password.')
-      setSuccessType('signup') // Use signup type since it doesn't auto-close
-    } catch (err) {
-      console.error('Reset password error:', err)
-      setError('An unexpected error occurred. Please try again.')
+      setIsLoading(true);
+      setError("");
+
+      await signUp.create({
+        firstName,
+        lastName,
+        emailAddress: email,
+        password,
+      });
+
+      // Send email verification
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setPendingVerification(true);
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: { message: string }[] };
+      const errorMessage = clerkError.errors?.[0]?.message || "Sign up failed. Please try again.";
+      setError(errorMessage);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  // Initialize OAuth progress steps
-  const initializeOAuthProgress = (provider: 'google' | 'github') => {
-    const steps: ProgressStep[] = [
-      { id: 'initiate', label: 'Initiating', description: 'Starting authentication', status: 'active' },
-      { id: 'redirect', label: 'Redirecting', description: `Connecting to ${provider}`, status: 'pending' },
-      { id: 'authorize', label: 'Authorizing', description: 'Waiting for approval', status: 'pending' },
-      { id: 'complete', label: 'Complete', description: 'Finishing up', status: 'pending' }
-    ]
-    setOauthProgress(steps)
-    setShowProgressIndicator(true)
-    setLoadingProgress(0)
-  }
+  // Verify email code
+  const handleVerifyEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!signUpLoaded || !signUp) return;
 
-  // Update OAuth progress step
-  const updateOAuthProgress = (stepId: string, status: ProgressStep['status']) => {
-    setOauthProgress(prev => prev.map(step => 
-      step.id === stepId ? { ...step, status } : step
-    ))
-  }
-
-  // Simulate loading progress for long operations
-  const simulateLoadingProgress = () => {
-    setLoadingProgress(0)
-    const interval = setInterval(() => {
-      setLoadingProgress(prev => {
-        const increment = Math.random() * 15 + 5 // Random increment between 5-20%
-        const newProgress = prev + increment
-        if (newProgress >= 90) {
-          clearInterval(interval)
-          return 90 // Cap at 90% until actual completion
-        }
-        return newProgress
-      })
-    }, 200)
-    
-    return () => clearInterval(interval)
-  }
-
-  const handleOAuthSignIn = async (provider: 'google' | 'github') => {
-    setIsLoading(true)
-    setError('') // Clear any previous errors
-    setFailedOAuthProvider(null) // Clear any previous failed provider
-    
-    // Initialize progress tracking
-    initializeOAuthProgress(provider)
-    const stopProgress = simulateLoadingProgress()
-    
     try {
-      // Step 1: Initiate OAuth
-      updateOAuthProgress('initiate', 'completed')
-      setLoadingProgress(25)
-      
-      // Show success notification immediately since OAuth will redirect
-      setShowSuccess(true)
-      setSuccessMessage(`Connecting with ${provider === 'google' ? 'Google' : 'GitHub'}... You'll be redirected momentarily.`)
-      setSuccessType('oauth')
-      
-      // Step 2: Prepare redirect
-      updateOAuthProgress('redirect', 'active')
-      setLoadingProgress(50)
-      
-      // Small delay to show the progress
-      await new Promise(resolve => setTimeout(resolve, 800))
-      
-      updateOAuthProgress('redirect', 'completed')
-      updateOAuthProgress('authorize', 'active')
-      setLoadingProgress(75)
-      
-      await oauthSignIn(provider)
-      
-      // Complete progress (this might not be reached due to redirect)
-      updateOAuthProgress('authorize', 'completed')
-      updateOAuthProgress('complete', 'completed')
-      setLoadingProgress(100)
-      
-    } catch (error) {
-      // Hide success message if there was an error
-      setShowSuccess(false)
-      setShowProgressIndicator(false)
-      stopProgress()
-      
-      // Mark current step as error
-      const activeStep = oauthProgress.find(step => step.status === 'active')
-      if (activeStep) {
-        updateOAuthProgress(activeStep.id, 'error')
-      }
-      
-      console.error('OAuth error:', error)
-      setFailedOAuthProvider(provider) // Track which provider failed
-      
-      if (error instanceof Error) {
-        // Use the new error recovery system
-        const authError = {
-          userMessage: error.message,
-          retryable: true,
-          errorCode: determineErrorCode(error.message)
-        }
-        
-        // Update recovery state
-        recoveryManager.updateState(authError, provider)
-        const recoveryState = recoveryManager.getState()
-        setRecoverySuggestions(recoveryState.suggestedActions)
-        
-        // Check if we should auto-retry
-        if (recoveryManager.shouldAutoRetry(authError)) {
-          startAutoRetry(provider)
-        } else {
-          setError(error.message)
-        }
+      setIsLoading(true);
+      setError("");
+
+      const result = await signUp.attemptEmailAddressVerification({
+        code: verificationCode,
+      });
+
+      if (result.status === "complete") {
+        window.location.reload();
       } else {
-        // Fallback for unknown error types
-        setError(`An unexpected error occurred during ${provider === 'google' ? 'Google' : 'GitHub'} login. Please try email login instead.`)
+        setError("Verification incomplete. Please try again.");
       }
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: { message: string }[] };
+      const errorMessage = clerkError.errors?.[0]?.message || "Invalid verification code.";
+      setError(errorMessage);
     } finally {
-      if (!isAutoRetrying) {
-        setIsLoading(false)
-      }
+      setIsLoading(false);
     }
-  }
+  };
 
-  // Helper function to determine error code from message
-  const determineErrorCode = (message: string): string => {
-    if (message.includes('redirect_uri_mismatch')) return 'REDIRECT_URI_MISMATCH'
-    if (message.includes('unauthorized_client')) return 'UNAUTHORIZED_CLIENT'
-    if (message.includes('access_denied')) return 'ACCESS_DENIED'
-    if (message.includes('temporarily_unavailable')) return 'TEMPORARILY_UNAVAILABLE'
-    if (message.includes('server_error')) return 'SERVER_ERROR'
-    if (message.includes('Failed to connect')) return 'NETWORK_ERROR'
-    return 'OAUTH_ERROR'
-  }
-
-  // Auto-retry functionality
-  const startAutoRetry = (provider: 'google' | 'github') => {
-    setIsAutoRetrying(true)
-    const delay = calculateRetryDelay(recoveryManager.getState().retryCount, DEFAULT_RETRY_CONFIG)
-    setRetryCountdown(Math.ceil(delay / 1000))
-    
-    // Start countdown
-    countdownIntervalRef.current = setInterval(() => {
-      setRetryCountdown(prev => {
-        if (prev <= 1) {
-          if (countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current)
-          }
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-    
-    // Execute retry after delay
-    retryTimeoutRef.current = setTimeout(async () => {
-      setRetryCountdown(0)
-      try {
-        await handleOAuthSignIn(provider)
-        setIsAutoRetrying(false)
-        setError('')
-        setRecoverySuggestions([])
-      } catch (retryError) {
-        setIsAutoRetrying(false)
-        if (retryError instanceof Error) {
-          setError(retryError.message)
-        }
-      }
-    }, delay)
-  }
-
-  // Cancel auto-retry
-  const cancelAutoRetry = () => {
-    setIsAutoRetrying(false)
-    setRetryCountdown(0)
-    if (retryTimeoutRef.current) {
-      clearTimeout(retryTimeoutRef.current)
-    }
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current)
-    }
-    recoveryManager.disableAutoRetry()
-  }
-
-  const handleRetryOAuth = () => {
-    if (failedOAuthProvider) {
-      // Reset recovery state for manual retry
-      recoveryManager.enableAutoRetry()
-      setRecoverySuggestions([])
-      setError('')
-      handleOAuthSignIn(failedOAuthProvider)
-    }
-  }
-
-  // Success state
-  if (showSuccess) {
-    const getSuccessIcon = () => {
-      switch (successType) {
-        case 'email':
-          return <Check className="w-16 h-16 text-success mx-auto animate-pulse" />
-        case 'oauth':
-          return <CheckCircle className="w-16 h-16 text-success mx-auto animate-bounce" />
-        case 'signup':
-          return <CheckCircle className="w-16 h-16 text-success mx-auto" />
-        default:
-          return <CheckCircle className="w-16 h-16 text-success mx-auto" />
-      }
-    }
-
-    const getSuccessTitle = () => {
-      switch (successType) {
-        case 'email':
-          return 'Welcome Back!'
-        case 'oauth':
-          return 'Connecting...'
-        case 'signup':
-          return 'Account Created!'
-        default:
-          return isForgotPassword ? 'Email Sent!' : 'Success!'
-      }
-    }
-
-    const shouldAutoClose = successType === 'email' || successType === 'oauth'
-
-    return (
-      <div className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-background rounded-2xl border border-border w-full max-w-md mx-auto shadow-2xl">
-          <div className="p-8 text-center">
-            <div className="mb-6">
-              {getSuccessIcon()}
-            </div>
-            <h2 className="text-2xl font-semibold text-foreground mb-4">
-              {getSuccessTitle()}
-            </h2>
-            <p className="text-muted-foreground mb-8 leading-relaxed">
-              {successMessage}
-            </p>
-            
-            {/* Show different actions based on success type */}
-            {successType === 'oauth' && (
-              <div className="mb-4">
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Redirecting you now...
-                </div>
-              </div>
-            )}
-            
-            {!shouldAutoClose && (
-              <button
-                onClick={handleClose}
-                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors font-medium"
-              >
-                Got it
-              </button>
-            )}
-            
-            {shouldAutoClose && (
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Check className="w-4 h-4" />
-                {successType === 'email' ? 'Closing automatically...' : 'Redirecting...'}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-background rounded-2xl border border-border w-full max-w-md mx-auto">
+    <div
+      className={`fixed inset-0 bg-background/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300 ${
+        isAnimating ? "opacity-100" : "opacity-0"
+      }`}
+      onClick={handleBackdropClick}
+    >
+      {/* Ambient glow effect */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-3xl" />
+      </div>
+
+      <div
+        className={`relative bg-background rounded-2xl border border-primary/20 shadow-2xl shadow-primary/10 w-full max-w-md mx-auto max-h-[90vh] flex flex-col transition-all duration-300 ${
+          isAnimating
+            ? "opacity-100 scale-100 translate-y-0"
+            : "opacity-0 scale-95 translate-y-4"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Decorative corner accents */}
+        <div className="absolute -top-px -left-px w-16 h-16 border-t-2 border-l-2 border-primary/40 rounded-tl-2xl pointer-events-none" />
+        <div className="absolute -top-px -right-px w-16 h-16 border-t-2 border-r-2 border-primary/40 rounded-tr-2xl pointer-events-none" />
+
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <div className="flex items-center">
-            {isForgotPassword && (
-              <button
-                onClick={() => {
-                  setIsForgotPassword(false)
-                  setError('')
-                }}
-                className="mr-3 text-muted-foreground hover:text-foreground transition-colors p-1"
-              >
-                <ArrowLeft size={20} />
-              </button>
-            )}
-            <h2 className="text-xl font-semibold text-foreground">
-              {isForgotPassword ? 'Reset Password' : isSignUp ? 'Create Account' : 'Sign In'}
-            </h2>
+        <div className="relative bg-primary/10 border-b border-primary/20 p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-primary/20 rounded-xl relative">
+                <div className="absolute inset-0 bg-primary/20 rounded-xl animate-pulse" />
+                {activeTab === "signin" ? (
+                  <LogIn className="w-5 h-5 text-accent relative z-10" />
+                ) : (
+                  <UserPlus className="w-5 h-5 text-accent relative z-10" />
+                )}
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                  {pendingVerification
+                    ? "Verify Email"
+                    : activeTab === "signin"
+                      ? "Welcome Back"
+                      : "Join Us"}
+                  <Sparkles className="w-4 h-4 text-accent" />
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {pendingVerification
+                    ? "Check your email for a code"
+                    : activeTab === "signin"
+                      ? "Sign in to continue"
+                      : "Create your account"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-muted-foreground hover:text-foreground transition-all duration-200 p-2 hover:bg-muted/50 rounded-xl hover:rotate-90"
+            >
+              <X size={20} />
+            </button>
           </div>
-          <button
-            onClick={handleClose}
-            className="text-muted-foreground hover:text-foreground transition-colors p-1"
-          >
-            <X size={20} />
-          </button>
-        </div>
 
-        <div className="p-6">
-          {/* Forgot Password Form */}
-          {isForgotPassword ? (
-            <>
-              <p className="text-muted-foreground mb-6 text-sm">
-                                 Enter your email address and we&apos;ll send you a link to reset your password.
-              </p>
-
-              {/* Error Message with Recovery System */}
-              {(error || isAutoRetrying) && (
-                <div className="mb-4 p-3 bg-error-background border border-error rounded-lg">
-                  {/* Auto-retry indicator */}
-                  {isAutoRetrying && (
-                    <div className="flex items-center gap-2 mb-3 p-2 bg-blue-50 border border-blue-200 rounded">
-                      <RefreshCw className="animate-spin text-blue-600" size={16} />
-                      <div className="text-blue-700 text-sm">
-                        <p className="font-medium">Auto-retrying in {retryCountdown} seconds...</p>
-                        <p className="text-xs">Attempting to reconnect automatically</p>
-                      </div>
-                      <button
-                        onClick={cancelAutoRetry}
-                        className="ml-auto px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* Error message */}
-                  {error && (
-                    <p className="text-error text-sm mb-2">{error}</p>
-                  )}
-                  
-                  {/* Recovery suggestions */}
-                  {recoverySuggestions.length > 0 && (
-                    <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Lightbulb className="text-amber-600" size={16} />
-                        <span className="text-amber-800 text-sm font-medium">Recovery Suggestions</span>
-                      </div>
-                      <div className="space-y-2">
-                        {recoverySuggestions.slice(0, 3).map((suggestion, index) => (
-                          <div key={index} className="flex items-start gap-2">
-                            <div className="flex-shrink-0 mt-0.5">
-                              {suggestion.priority === 'high' && <AlertTriangle className="text-red-500" size={12} />}
-                              {suggestion.priority === 'medium' && <div className="w-3 h-3 bg-yellow-400 rounded-full" />}
-                              {suggestion.priority === 'low' && <div className="w-3 h-3 bg-gray-400 rounded-full" />}
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-amber-800 text-xs font-medium">{suggestion.label}</p>
-                              <p className="text-amber-700 text-xs">{suggestion.description}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Development-specific debug info */}
-                  {isDevelopment() && error && (
-                    <details className="mt-2">
-                      <summary className="text-xs text-error/70 cursor-pointer hover:text-error">
-                        🔍 Debug Info (Development Only)
-                      </summary>
-                      <div className="mt-2 p-2 bg-error/10 rounded text-xs text-error/80">
-                        <p><strong>Environment:</strong> {process.env.NODE_ENV}</p>
-                        <p><strong>Timestamp:</strong> {new Date().toISOString()}</p>
-                        <p><strong>Component:</strong> AuthModal</p>
-                        <p><strong>Action:</strong> {isSignUp ? 'Sign Up' : 'Sign In'}</p>
-                        <p><strong>Retry Count:</strong> {recoveryManager.getState().retryCount}</p>
-                        <p><strong>Failed Providers:</strong> {recoveryManager.getFailedProviders().join(', ') || 'None'}</p>
-                        <p><strong>Browser:</strong> {navigator.userAgent.slice(0, 50)}...</p>
-                      </div>
-                    </details>
-                  )}
-                  
-                  {/* Action buttons */}
-                  {failedOAuthProvider && !isAutoRetrying && (
-                    <div className="flex gap-2 mt-3">
-                      <button
-                        onClick={handleRetryOAuth}
-                        disabled={isLoading}
-                        className="px-3 py-1 text-xs bg-error text-error-background rounded hover:bg-error/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Try {failedOAuthProvider === 'google' ? 'Google' : 'GitHub'} Again
-                      </button>
-                      <button
-                        onClick={() => {
-                          setError('')
-                          setFailedOAuthProvider(null)
-                          setRecoverySuggestions([])
-                          recoveryManager.reset()
-                        }}
-                        className="px-3 py-1 text-xs text-error hover:text-error/80 transition-colors"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <div>
-                  <label htmlFor="reset-email" className="block text-sm font-medium text-muted-foreground mb-2">
-                    Email
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
-                    <input
-                      id="reset-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-muted border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                      placeholder="Enter your email"
-                      required
-                    />
-                  </div>
-                </div>
+          {/* Tab Switcher - hide during verification */}
+          {!pendingVerification && (
+            <div className="mt-4 relative">
+              <div className="flex bg-muted/50 rounded-xl p-1 relative">
+                {/* Animated background indicator */}
+                <div
+                  className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-primary rounded-lg shadow-lg shadow-primary/30 transition-all duration-300 ease-out ${
+                    activeTab === "signin" ? "left-1" : "left-[calc(50%+2px)]"
+                  }`}
+                />
 
                 <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  onClick={() => handleTabSwitch("signin")}
+                  className={`flex-1 py-2.5 px-4 text-sm font-semibold rounded-lg transition-all duration-300 relative z-10 flex items-center justify-center gap-2 ${
+                    activeTab === "signin"
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
                 >
-                  {isLoading ? 'Sending...' : 'Send Reset Link'}
+                  <LogIn className="w-4 h-4" />
+                  Sign In
                 </button>
-              </form>
-            </>
+                <button
+                  onClick={() => handleTabSwitch("signup")}
+                  className={`flex-1 py-2.5 px-4 text-sm font-semibold rounded-lg transition-all duration-300 relative z-10 flex items-center justify-center gap-2 ${
+                    activeTab === "signup"
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Sign Up
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="p-5 flex-grow overflow-y-auto">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-xl">
+              <p className="text-sm text-error">{error}</p>
+            </div>
+          )}
+
+          {/* Email Verification Form */}
+          {pendingVerification ? (
+            <form onSubmit={handleVerifyEmail} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Verification Code
+                </label>
+                <input
+                  type="text"
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
+                  placeholder="Enter 6-digit code"
+                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  "Verify Email"
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingVerification(false)}
+                className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Back to sign up
+              </button>
+            </form>
           ) : (
             <>
               {/* OAuth Buttons */}
               <div className="space-y-3 mb-6">
                 <button
-                  onClick={() => handleOAuthSignIn('google')}
+                  onClick={() => handleOAuthSignIn("oauth_google")}
                   disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-foreground text-background rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="w-full py-3 bg-muted border border-border rounded-xl font-medium text-foreground hover:bg-secondary hover:border-primary/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                 >
-                  {isLoading ? (
-                    <>
-                      <RefreshCw className="animate-spin" size={20} />
-                      <span className="flex items-center gap-1">
-                        {showSuccess && successType === 'oauth' ? 'Success! Redirecting' : 'Connecting to Google'}
-                        <AnimatedDots className="text-background" />
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Chrome size={20} />
-                      Continue with Google
-                    </>
-                  )}
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path
+                      fill="currentColor"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="currentColor"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="currentColor"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    />
+                    <path
+                      fill="currentColor"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    />
+                  </svg>
+                  Continue with Google
                 </button>
-                
+
                 <button
-                  onClick={() => handleOAuthSignIn('github')}
+                  onClick={() => handleOAuthSignIn("oauth_github")}
                   disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-muted text-foreground rounded-lg hover:bg-muted/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium border border-border"
+                  className="w-full py-3 bg-muted border border-border rounded-xl font-medium text-foreground hover:bg-secondary hover:border-primary/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                 >
-                  {isLoading ? (
-                    <>
-                      <RefreshCw className="animate-spin" size={20} />
-                      <span className="flex items-center gap-1">
-                        {showSuccess && successType === 'oauth' ? 'Success! Redirecting' : 'Connecting to GitHub'}
-                        <AnimatedDots className="text-foreground" />
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Github size={20} />
-                      Continue with GitHub
-                    </>
-                  )}
+                  <Github className="w-5 h-5" />
+                  Continue with GitHub
                 </button>
               </div>
-
-              {/* OAuth Progress Indicator */}
-              {showProgressIndicator && oauthProgress.length > 0 && (
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="mb-3">
-                    <h4 className="text-sm font-medium text-blue-800 mb-1">Authentication Progress</h4>
-                    <p className="text-xs text-blue-600">Please wait while we connect you securely</p>
-                  </div>
-                  <ProgressIndicator 
-                    steps={oauthProgress} 
-                    variant="horizontal" 
-                    className="mb-3"
-                  />
-                  <LoadingProgress 
-                    progress={loadingProgress}
-                    variant="determinate"
-                    color="blue"
-                    className="mt-2"
-                  />
-                </div>
-              )}
-
-              {/* Sign-up Progress Steps */}
-              {isSignUp && !showProgressIndicator && (
-                <div className="mb-4">
-                  <MiniStepIndicator 
-                    currentStep={authFlowStep}
-                    totalSteps={3}
-                    labels={['Details', 'Verify', 'Complete']}
-                    className="justify-center"
-                  />
-                </div>
-              )}
 
               {/* Divider */}
-              <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-3 bg-background text-muted-foreground">Or continue with email</span>
-                </div>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <div className="flex-1 h-px bg-border" />
               </div>
 
-              {/* Error Message with Recovery System */}
-              {(error || isAutoRetrying) && (
-                <div className="mb-4 p-3 bg-error-background border border-error rounded-lg">
-                  {/* Auto-retry indicator */}
-                  {isAutoRetrying && (
-                    <div className="flex items-center gap-2 mb-3 p-2 bg-blue-50 border border-blue-200 rounded">
-                      <RefreshCw className="animate-spin text-blue-600" size={16} />
-                      <div className="text-blue-700 text-sm">
-                        <p className="font-medium">Auto-retrying in {retryCountdown} seconds...</p>
-                        <p className="text-xs">Attempting to reconnect automatically</p>
-                      </div>
-                      <button
-                        onClick={cancelAutoRetry}
-                        className="ml-auto px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                      >
-                        Cancel
-                      </button>
+              {/* Email/Password Form */}
+              <form onSubmit={activeTab === "signin" ? handleEmailSignIn : handleEmailSignUp} className="space-y-4">
+                {/* Name fields - only for sign up */}
+                {activeTab === "signup" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                        <User className="w-4 h-4 text-accent" />
+                        First Name
+                      </label>
+                      <input
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="John"
+                        className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all"
+                        required
+                      />
                     </div>
-                  )}
-                  
-                  {/* Error message */}
-                  {error && (
-                    <p className="text-error text-sm mb-2">{error}</p>
-                  )}
-                  
-                  {/* Recovery suggestions */}
-                  {recoverySuggestions.length > 0 && (
-                    <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Lightbulb className="text-amber-600" size={16} />
-                        <span className="text-amber-800 text-sm font-medium">Recovery Suggestions</span>
-                      </div>
-                      <div className="space-y-2">
-                        {recoverySuggestions.slice(0, 3).map((suggestion, index) => (
-                          <div key={index} className="flex items-start gap-2">
-                            <div className="flex-shrink-0 mt-0.5">
-                              {suggestion.priority === 'high' && <AlertTriangle className="text-red-500" size={12} />}
-                              {suggestion.priority === 'medium' && <div className="w-3 h-3 bg-yellow-400 rounded-full" />}
-                              {suggestion.priority === 'low' && <div className="w-3 h-3 bg-gray-400 rounded-full" />}
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-amber-800 text-xs font-medium">{suggestion.label}</p>
-                              <p className="text-amber-700 text-xs">{suggestion.description}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Doe"
+                        className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all"
+                        required
+                      />
                     </div>
-                  )}
-                  
-                  {/* Development-specific debug info */}
-                  {isDevelopment() && error && (
-                    <details className="mt-2">
-                      <summary className="text-xs text-error/70 cursor-pointer hover:text-error">
-                        🔍 Debug Info (Development Only)
-                      </summary>
-                      <div className="mt-2 p-2 bg-error/10 rounded text-xs text-error/80">
-                        <p><strong>Environment:</strong> {process.env.NODE_ENV}</p>
-                        <p><strong>Timestamp:</strong> {new Date().toISOString()}</p>
-                        <p><strong>Component:</strong> AuthModal</p>
-                        <p><strong>Action:</strong> {isSignUp ? 'Sign Up' : 'Sign In'}</p>
-                        <p><strong>Retry Count:</strong> {recoveryManager.getState().retryCount}</p>
-                        <p><strong>Failed Providers:</strong> {recoveryManager.getFailedProviders().join(', ') || 'None'}</p>
-                        <p><strong>Browser:</strong> {navigator.userAgent.slice(0, 50)}...</p>
-                      </div>
-                    </details>
-                  )}
-                  
-                  {/* Action buttons */}
-                  {failedOAuthProvider && !isAutoRetrying && (
-                    <div className="flex gap-2 mt-3">
-                      <button
-                        onClick={handleRetryOAuth}
-                        disabled={isLoading}
-                        className="px-3 py-1 text-xs bg-error text-error-background rounded hover:bg-error/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Try {failedOAuthProvider === 'google' ? 'Google' : 'GitHub'} Again
-                      </button>
-                      <button
-                        onClick={() => {
-                          setError('')
-                          setFailedOAuthProvider(null)
-                          setRecoverySuggestions([])
-                          recoveryManager.reset()
-                        }}
-                        className="px-3 py-1 text-xs text-error hover:text-error/80 transition-colors"
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* Email Form */}
-              <form onSubmit={handleEmailAuth} className="space-y-4">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-muted-foreground mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-accent" />
                     Email
                   </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={18} />
-                    <input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-muted border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                      placeholder="Enter your email"
-                      required
-                    />
-                  </div>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all"
+                    required
+                  />
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-muted-foreground mb-2"
-                  >
+                  <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-accent" />
                     Password
                   </label>
                   <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all pr-12"
+                      required
+                    />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
-                    <input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-4 pr-10 py-3 bg-muted border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-                      placeholder="Enter your password"
-                      required
-                    />
                   </div>
                 </div>
 
-                {/* Forgot Password Link */}
-                {!isSignUp && (
-                  <div className="text-right">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsForgotPassword(true)
-                        setError('')
-                      }}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      Forgot password?
-                    </button>
+                {/* Confirm password - only for sign up */}
+                {activeTab === "signup" && (
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-accent" />
+                      Confirm Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all pr-12"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
                   </div>
                 )}
 
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary-hover transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {isLoading ? 'Loading...' : (isSignUp ? 'Create Account' : 'Sign In')}
+                  {isLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : activeTab === "signin" ? (
+                    <>
+                      <LogIn className="w-5 h-5" />
+                      Sign In
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-5 h-5" />
+                      Create Account
+                    </>
+                  )}
                 </button>
               </form>
-
-              {/* Toggle between Sign In / Sign Up */}
-              <div className="text-center mt-6">
-                <p className="text-sm text-muted-foreground">
-                  {isSignUp ? 'Already have an account? ' : 'Don\'t have an account? '}
-                  <button
-                    onClick={() => {
-                      setIsSignUp(!isSignUp)
-                      setError('')
-                    }}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {isSignUp ? 'Sign In' : 'Sign Up'}
-                  </button>
-                </p>
-              </div>
             </>
           )}
         </div>
+
+        {/* Footer accent */}
+        <div className="px-5 pb-4">
+          <div className="h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent rounded-full" />
+        </div>
       </div>
     </div>
-  )
-} 
+  );
+}
