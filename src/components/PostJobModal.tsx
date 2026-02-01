@@ -115,6 +115,8 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
         addTag(tagInput.trim())
       }
     } else if (e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
       setShowTagSuggestions(false)
       setHighlightedIndex(-1)
     }
