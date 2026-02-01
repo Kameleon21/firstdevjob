@@ -1,12 +1,6 @@
 import React from 'react'
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 import { render, screen } from '@testing-library/react'
-import { mockSupabaseClient, resetMockDatabase } from '../mocks/supabase'
-
-// Mock the Supabase client
-jest.mock('@/lib/supabase/client', () => ({
-  createClient: () => mockSupabaseClient,
-}))
 
 // Mock JobCard component with a simple implementation for testing
 const MockJobCard: React.FC<{
@@ -33,7 +27,6 @@ const MockJobCard: React.FC<{
 describe('JobCard Component', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    resetMockDatabase()
   })
 
   const mockJob = {
@@ -81,4 +74,4 @@ describe('JobCard Component', () => {
 
     expect(screen.getByTestId('job-card')).toBeInTheDocument()
   })
-}) 
+})
