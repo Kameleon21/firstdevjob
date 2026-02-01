@@ -1,33 +1,33 @@
 'use client'
-
 import { useState } from 'react'
 import { Check, X, ExternalLink, Calendar, Building2, MapPin, Tag } from 'lucide-react'
-import { updateJobStatus } from '@/app/actions/admin'
+import { useMutation } from 'convex/react'
+import type { Id } from '../../convex/_generated/dataModel'
+import { api } from '../../convex/_generated/api'
 
 interface PendingJob {
-  id: number;
-  created_at: string;
-  title: string;
-  company: string;
-  location: string;
-  url: string;
-  status: 'pending' | 'approved' | 'rejected';
-  tags: { id: number; name: string }[];
+  id: Id<'jobs'>
+  createdAt: number
+  title: string
+  company: string
+  location: string
+  url: string
+  status: 'pending' | 'approved' | 'rejected'
+  tags: string[]
 }
 
 interface AdminJobCardProps {
-  job: PendingJob;
-  onJobUpdate: () => void;
+  job: PendingJob
 }
 
-export default function AdminJobCard({ job, onJobUpdate }: AdminJobCardProps) {
+export default function AdminJobCard({ job }: AdminJobCardProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const updateJobStatus = useMutation(api.admin.updateJobStatus)
 
   const handleStatusUpdate = async (status: 'approved' | 'rejected') => {
     setIsLoading(true)
     try {
-      await updateJobStatus(job.id, status)
-      onJobUpdate() // Refresh the pending jobs list
+      await updateJobStatus({ jobId: job.id, status })
     } catch (error) {
       console.error('Error updating job status:', error)
       alert('Failed to update job status. Please try again.')
@@ -48,7 +48,7 @@ export default function AdminJobCard({ job, onJobUpdate }: AdminJobCardProps) {
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Calendar size={12} />
           <span>
-            {new Date(job.created_at).toLocaleDateString('en-US', {
+            {new Date(job.createdAt).toLocaleDateString('en-US', {
               month: 'short',
               day: 'numeric',
               year: 'numeric'
@@ -82,14 +82,14 @@ export default function AdminJobCard({ job, onJobUpdate }: AdminJobCardProps) {
             <span className="text-sm text-muted-foreground">Technologies</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {job.tags.map((tag) => (
-              <span
-                key={tag.id}
-                className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-xs font-medium border border-primary"
-              >
-                {tag.name}
-              </span>
-            ))}
+          {job.tags.map((tag) => (
+            <span
+              key={tag}
+              className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-xs font-medium border border-primary"
+            >
+              {tag}
+            </span>
+          ))}
           </div>
         </div>
       )}

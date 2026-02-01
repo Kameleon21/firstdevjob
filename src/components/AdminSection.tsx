@@ -1,23 +1,22 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Shield, Clock, RefreshCw } from 'lucide-react'
+import { Shield, Clock } from 'lucide-react'
+import type { Id } from '../../convex/_generated/dataModel'
 import AdminJobCard from './AdminJobCard'
-import { getPendingJobs } from '@/app/actions/admin'
 
 interface PendingJob {
-  id: number;
-  created_at: string;
-  title: string;
-  company: string;
-  location: string;
-  url: string;
-  status: 'pending' | 'approved' | 'rejected';
-  tags: { id: number; name: string }[];
+  id: Id<'jobs'>
+  createdAt: number
+  title: string
+  company: string
+  location: string
+  url: string
+  status: 'pending' | 'approved' | 'rejected'
+  tags: string[]
 }
 
 interface AdminSectionProps {
-  initialPendingJobs: PendingJob[]
+  pendingJobs: PendingJob[]
   userRole: {
     isAdmin: boolean
     isModerator: boolean
@@ -26,22 +25,7 @@ interface AdminSectionProps {
   }
 }
 
-export default function AdminSection({ initialPendingJobs, userRole }: AdminSectionProps) {
-  const [pendingJobs, setPendingJobs] = useState<PendingJob[]>(initialPendingJobs)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-
-  const refreshPendingJobs = useCallback(async () => {
-    setIsRefreshing(true)
-    try {
-      const updatedJobs = await getPendingJobs()
-      setPendingJobs(updatedJobs)
-    } catch (error) {
-      console.error('Error refreshing pending jobs:', error)
-    } finally {
-      setIsRefreshing(false)
-    }
-  }, [])
-
+export default function AdminSection({ pendingJobs, userRole }: AdminSectionProps) {
   if (!userRole.isModerator) {
     return null
   }
@@ -62,14 +46,6 @@ export default function AdminSection({ initialPendingJobs, userRole }: AdminSect
               </p>
             </div>
           </div>
-          <button
-            onClick={refreshPendingJobs}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 px-3 py-2 bg-muted text-muted-foreground rounded-lg hover:bg-muted/80 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
-            Refresh
-          </button>
         </div>
       </div>
 
@@ -102,7 +78,6 @@ export default function AdminSection({ initialPendingJobs, userRole }: AdminSect
             <AdminJobCard
               key={job.id}
               job={job}
-              onJobUpdate={refreshPendingJobs}
             />
           ))}
         </div>

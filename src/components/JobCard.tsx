@@ -1,9 +1,14 @@
 'use client'
 
+import { useState } from 'react'
+import { useConvexAuth, useMutation, useQuery } from 'convex/react'
+import { useRouter } from 'next/navigation'
+import type { Id } from '../../convex/_generated/dataModel'
+import { api } from '../../convex/_generated/api'
 import { highlightText } from '@/lib/textHighlight'
 
 interface Job {
-  _id: string;
+  _id: Id<'jobs'>;
   _creationTime: number;
   title: string;
   company: string;
@@ -19,9 +24,18 @@ interface JobCardProps {
 }
 
 export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
+  const router = useRouter()
+  const { isAuthenticated, isLoading } = useConvexAuth()
+  const bookmarkStatus = useQuery(
+    api.bookmarks.getBookmarkStatus,
+    isAuthenticated ? { jobId: job._id } : 'skip'
+  )
+  const toggleBookmark = useMutation(api.bookmarks.toggleBookmark)
+  const [isToggling, setIsToggling] = useState(false)
   const jobTags = job.tags ?? []
   const jobLocation = job.location ?? ''
   const jobUrl = job.url ?? '#'
+  const isBookmarked = bookmarkStatus?.bookmarked ?? false
 
   return (
     <div className="bg-background border border-border rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:border-primary">
@@ -32,11 +46,33 @@ export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
         </h3>
         <button
           type="button"
-          disabled
-          className="text-muted-foreground cursor-not-allowed"
-          title="Bookmarks are temporarily disabled during migration"
+          disabled={isLoading || isToggling}
+          onClick={async () => {
+            if (!isAuthenticated) {
+              router.push('/auth/login?message=Please sign in to bookmark jobs')
+              return
+            }
+
+            setIsToggling(true)
+            try {
+              await toggleBookmark({ jobId: job._id })
+            } catch (error) {
+              console.error('Error toggling bookmark:', error)
+            } finally {
+              setIsToggling(false)
+            }
+          }}
+          className={`transition-colors ${
+            isBookmarked ? 'text-accent' : 'text-muted-foreground'
+          } ${isLoading || isToggling ? 'opacity-50 cursor-not-allowed' : 'hover:text-accent'}`}
+          title={isBookmarked ? 'Remove bookmark' : 'Save job'}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="w-5 h-5"
+            fill={isBookmarked ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
           </svg>
         </button>

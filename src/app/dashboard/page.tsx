@@ -1,28 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import useSWR from "swr";
+import { useQuery } from "convex/react";
 import Header from "@/components/Header";
 import DashboardJobCard from "@/components/DashboardJobCard";
 import AdminSection from "@/components/AdminSection";
 import PostJobModal from "@/components/PostJobModal";
 import Toast from "@/components/Toast";
-import { getDashboardData } from "@/app/actions/dashboard";
+import { api } from "../../../convex/_generated/api";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { data, error, isLoading } = useSWR("dashboardData", getDashboardData, {
-    onSuccess: (data) => {
-      if (!data.user) {
-        router.push(
-          "/auth/login?message=Please sign in to view your dashboard",
-        );
-      }
-    },
-    revalidateOnFocus: false,
-  });
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const data = useQuery(api.dashboard.getDashboardData);
+  const isLoading = authLoading || data === undefined;
 
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -40,6 +34,12 @@ export default function DashboardPage() {
     setToastMessage(message);
     setShowToast(true);
   };
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push("/auth/login?message=Please sign in to view your dashboard");
+    }
+  }, [authLoading, isAuthenticated, router]);
 
   if (isLoading) {
     return (
@@ -59,25 +59,12 @@ export default function DashboardPage() {
     );
   }
 
-  if (error || !data) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-          <div className="text-center py-16">
-            <h2 className="text-2xl font-semibold text-foreground mb-4">
-              Could not load dashboard data.
-            </h2>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  if (!data) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   const { bookmarks, userRole, pendingJobs, allTags } = data;
@@ -97,7 +84,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Admin Section for moderators/admins */}
-        <AdminSection initialPendingJobs={pendingJobs} userRole={userRole} />
+        <AdminSection pendingJobs={pendingJobs} userRole={userRole} />
 
         {bookmarks.length === 0 ? (
           <div className="text-center py-16">
@@ -172,4 +159,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
