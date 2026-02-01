@@ -75,10 +75,7 @@ export const getPendingJobs = query({
 export const getPendingJobsCount = query({
   args: {},
   handler: async (ctx) => {
-    const { profile } = await requireModOrAdmin(ctx);
-    if (!profile) {
-      return 0;
-    }
+    await requireModOrAdmin(ctx);
 
     const jobs = await ctx.db
       .query("jobs")
