@@ -1,7 +1,20 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import PageWrapper from '@/components/PageWrapper'
+
+// Mock Convex
+jest.mock('convex/react', () => ({
+  useQuery: () => ['React', 'TypeScript', 'Node.js'],
+}))
+
+// Mock the Convex API
+jest.mock('../../convex/_generated/api', () => ({
+  api: {
+    tags: {
+      getAllTags: 'tags:getAllTags',
+    },
+  },
+}))
 
 // Mock child components
 jest.mock('@/components/Header', () => ({ onPostJobClick }: { onPostJobClick: () => void }) => (
@@ -14,25 +27,22 @@ jest.mock('@/components/JobSearchWrapper', () => () => <div data-testid="job-sea
 jest.mock('@/components/PostJobModal', () => () => <div data-testid="post-job-modal" />)
 jest.mock('@/components/Toast', () => () => <div data-testid="toast" />)
 
-describe('PageWrapper', () => {
-  const defaultProps = {
-    initialJobs: [],
-    allTags: [],
-  }
+import PageWrapper from '@/components/PageWrapper'
 
+describe('PageWrapper', () => {
   it('renders the main page components', () => {
-    render(<PageWrapper {...defaultProps} />)
+    render(<PageWrapper />)
     expect(screen.getByTestId('hero-section')).toBeInTheDocument()
     expect(screen.getByTestId('job-search-wrapper')).toBeInTheDocument()
   })
 
   it('does not render the PostJobModal initially', () => {
-    render(<PageWrapper {...defaultProps} />)
+    render(<PageWrapper />)
     expect(screen.queryByTestId('post-job-modal')).not.toBeInTheDocument()
   })
 
   it('lazily loads and renders the PostJobModal when the "Post a Job" button is clicked', async () => {
-    render(<PageWrapper {...defaultProps} />)
+    render(<PageWrapper />)
 
     // Ensure the modal is not there initially
     expect(screen.queryByTestId('post-job-modal')).not.toBeInTheDocument()
@@ -46,4 +56,4 @@ describe('PageWrapper', () => {
       expect(screen.getByTestId('post-job-modal')).toBeInTheDocument()
     })
   })
-}) 
+})

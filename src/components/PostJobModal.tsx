@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useMutation } from 'convex/react'
-import { X, Briefcase, Building2, MapPin, ExternalLink, Tag, AlertCircle } from 'lucide-react'
+import { X, Briefcase, Building2, MapPin, ExternalLink, Tag, AlertCircle, Plus } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
 
 interface PostJobModalProps {
@@ -22,6 +22,11 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [tagInput, setTagInput] = useState('')
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(-1)
+  const tagInputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
   const postJob = useMutation(api.jobs.postJob)
 
   const resetForm = useCallback(() => {
@@ -33,6 +38,103 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
       selectedTags: []
     })
     setError('')
+    setTagInput('')
+    setShowTagSuggestions(false)
+    setHighlightedIndex(-1)
+  }, [])
+
+  // Filter suggestions based on input
+  const filteredSuggestions = useMemo(() => {
+    if (!tagInput.trim()) return []
+    return allTags.filter(
+      tag =>
+        tag.toLowerCase().includes(tagInput.toLowerCase()) &&
+        !formData.selectedTags.includes(tag)
+    )
+  }, [tagInput, allTags, formData.selectedTags])
+
+  // Check if input matches an existing tag exactly (case-insensitive)
+  const exactMatch = useMemo(() =>
+    allTags.find(tag => tag.toLowerCase() === tagInput.trim().toLowerCase()),
+    [allTags, tagInput]
+  )
+
+  // Can add as new tag if: has input, no exact match exists, not already selected
+  const canAddNewTag = useMemo(() =>
+    tagInput.trim() &&
+    !exactMatch &&
+    !formData.selectedTags.some(
+      tag => tag.toLowerCase() === tagInput.trim().toLowerCase()
+    ),
+    [tagInput, exactMatch, formData.selectedTags]
+  )
+
+  const addTag = useCallback((tagName: string) => {
+    const trimmed = tagName.trim()
+    if (!trimmed) return
+
+    // Avoid duplicates (case-insensitive check)
+    if (formData.selectedTags.some(t => t.toLowerCase() === trimmed.toLowerCase())) {
+      return
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      selectedTags: [...prev.selectedTags, trimmed]
+    }))
+    setTagInput('')
+    setShowTagSuggestions(false)
+    setHighlightedIndex(-1)
+    tagInputRef.current?.focus()
+  }, [formData.selectedTags])
+
+  const removeTag = useCallback((tagName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedTags: prev.selectedTags.filter(t => t !== tagName)
+    }))
+  }, [])
+
+  const handleTagInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      const maxIndex = canAddNewTag ? filteredSuggestions.length : filteredSuggestions.length - 1
+      setHighlightedIndex(prev => Math.min(prev + 1, maxIndex))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightedIndex(prev => Math.max(prev - 1, -1))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (highlightedIndex >= 0 && highlightedIndex < filteredSuggestions.length) {
+        addTag(filteredSuggestions[highlightedIndex])
+      } else if (highlightedIndex === filteredSuggestions.length && canAddNewTag) {
+        addTag(tagInput.trim())
+      } else if (filteredSuggestions.length > 0) {
+        addTag(filteredSuggestions[0])
+      } else if (canAddNewTag) {
+        addTag(tagInput.trim())
+      }
+    } else if (e.key === 'Escape') {
+      setShowTagSuggestions(false)
+      setHighlightedIndex(-1)
+    }
+  }, [highlightedIndex, filteredSuggestions, canAddNewTag, tagInput, addTag])
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(e.target as Node) &&
+        tagInputRef.current &&
+        !tagInputRef.current.contains(e.target as Node)
+      ) {
+        setShowTagSuggestions(false)
+        setHighlightedIndex(-1)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   // Prevent background scrolling when modal is open and handle escape key
@@ -74,15 +176,6 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     setError('')
-  }
-
-  const handleTagToggle = (tagName: string) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedTags: prev.selectedTags.includes(tagName)
-        ? prev.selectedTags.filter(t => t !== tagName)
-        : [...prev.selectedTags, tagName]
-    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -241,31 +334,105 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
                 Technologies & Skills
                 <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
               </label>
-              <div className="bg-muted/30 rounded-xl p-4 border border-border/50">
-                <div className="flex flex-wrap gap-3">
-                  {allTags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => handleTagToggle(tag)}
-                      className={`px-4 py-2 text-sm rounded-full transition-all duration-200 border ${
-                        formData.selectedTags.includes(tag)
-                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-105"
-                          : "bg-muted/50 text-muted-foreground border-border/50 hover:bg-primary/20 hover:border-primary/50 hover:text-accent"
-                      }`}
+              <div className="bg-muted/30 rounded-xl p-4 border border-border/50 space-y-4">
+                {/* Tag Input with Autocomplete */}
+                <div className="relative">
+                  <input
+                    ref={tagInputRef}
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => {
+                      setTagInput(e.target.value)
+                      setShowTagSuggestions(true)
+                      setHighlightedIndex(-1)
+                    }}
+                    onFocus={() => setShowTagSuggestions(true)}
+                    onKeyDown={handleTagInputKeyDown}
+                    className="w-full px-4 py-3 bg-muted/50 border border-border/50 rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
+                    placeholder="Type to search or add a tag..."
+                  />
+                  {/* Autocomplete Dropdown */}
+                  {showTagSuggestions && (filteredSuggestions.length > 0 || canAddNewTag) && (
+                    <div
+                      ref={suggestionsRef}
+                      className="absolute z-10 w-full mt-1 bg-background border border-border/50 rounded-lg shadow-lg max-h-48 overflow-y-auto"
                     >
-                      {tag}
-                    </button>
-                  ))}
+                      {filteredSuggestions.map((tag, index) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => addTag(tag)}
+                          className={`w-full px-4 py-2 text-left text-sm transition-colors ${
+                            index === highlightedIndex
+                              ? 'bg-primary/20 text-accent'
+                              : 'text-foreground hover:bg-muted/50'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                      {canAddNewTag && (
+                        <button
+                          type="button"
+                          onClick={() => addTag(tagInput.trim())}
+                          className={`w-full px-4 py-2 text-left text-sm transition-colors flex items-center gap-2 border-t border-border/50 ${
+                            highlightedIndex === filteredSuggestions.length
+                              ? 'bg-primary/20 text-accent'
+                              : 'text-accent hover:bg-muted/50'
+                          }`}
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add &quot;{tagInput.trim()}&quot;
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                 {formData.selectedTags.length > 0 && (
-                   <div className="mt-4 pt-3 border-t border-border/50">
-                     <p className="text-xs text-muted-foreground flex items-start gap-2">
-                       <span className="text-accent font-medium">Selected ({formData.selectedTags.length}):</span>
-                       <span className="text-muted-foreground">{formData.selectedTags.join(', ')}</span>
-                     </p>
-                   </div>
-                 )}
+
+                {/* Selected Tags as Chips */}
+                {formData.selectedTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.selectedTags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-full"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="ml-1 hover:bg-primary-foreground/20 rounded-full p-0.5 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Quick Select - Popular Tags */}
+                {allTags.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Quick select:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {allTags.slice(0, 12).map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => addTag(tag)}
+                          disabled={formData.selectedTags.includes(tag)}
+                          className={`px-3 py-1.5 text-xs rounded-full transition-all duration-200 border ${
+                            formData.selectedTags.includes(tag)
+                              ? "bg-primary/20 text-primary border-primary/30 cursor-not-allowed opacity-50"
+                              : "bg-muted/50 text-muted-foreground border-border/50 hover:bg-primary/20 hover:border-primary/50 hover:text-accent"
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
