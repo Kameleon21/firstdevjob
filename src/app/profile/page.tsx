@@ -1,14 +1,13 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@clerk/nextjs/server'
 import ProfilePage from '@/components/ProfilePage'
 
 export default async function Profile() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { userId } = await auth()
 
-  if (!user) {
+  if (!userId) {
     redirect('/auth/login')
   }
 
   return <ProfilePage />
-} 
+}

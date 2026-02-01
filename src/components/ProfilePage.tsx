@@ -1,15 +1,17 @@
-'use client'
-
-import React, { useState, useEffect } from 'react'
-import { User as UserIcon, Mail, Edit3, Save, Shield, Trash2, Eye, EyeOff, ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
-import { getUserProfile, updateUserName, changePassword, deleteAccount } from '@/app/actions/profile'
-import Toast from './Toast'
+"use client";
+import React, { useState, useEffect } from "react";
+import { User as UserIcon, Mail, Edit3, Save, Shield, Trash2, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { useMutation, useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
+import { api } from "../../convex/_generated/api";
+import Toast from "./Toast";
 
 interface UserProfile {
   id: string
   email: string
-  full_name: string | null
+  fullName: string | null
   role: string
 }
 
@@ -19,77 +21,118 @@ const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [formData, setFormData] = useState({ full_name: '' })
+  const [formData, setFormData] = useState({ fullName: '' })
   const [passwordData, setPasswordData] = useState({
+    current_password: '',
     new_password: '',
     confirm_password: ''
   })
   const [showPasswords, setShowPasswords] = useState({
+    current: false,
     new: false,
     confirm: false
   })
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const profileResult = useQuery(api.profiles.getUserProfile)
+  const updateUserName = useMutation(api.profiles.updateUserName)
+  const deleteAccount = useMutation(api.profiles.deleteAccount)
+  const router = useRouter()
+  const { user, isLoaded } = useUser()
 
   useEffect(() => {
-    loadProfile()
-  }, [])
-
-  const loadProfile = async () => {
-    try {
-      const result = await getUserProfile()
-      if (result.error) {
-        setError(result.error)
-      } else {
-        setProfile(result as UserProfile)
-        setFormData({ full_name: result.full_name || '' })
-      }
-    } catch {
-      setError('Failed to load profile')
-    } finally {
-      setLoading(false)
+    if (!profileResult) {
+      return
     }
-  }
+
+    if ('error' in profileResult) {
+      setError(profileResult.error ?? 'Failed to load profile')
+      setLoading(false)
+      return
+    }
+
+    setProfile(profileResult as UserProfile)
+    setFormData({ fullName: profileResult.fullName || '' })
+    setError(null)
+    setLoading(false)
+  }, [profileResult])
 
   const handleUpdateName = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    const formDataObj = new FormData()
-    formDataObj.append('full_name', formData.full_name)
-    
-    const result = await updateUserName(formDataObj)
-    
-    if (result.error) {
+
+    const result = await updateUserName({ fullName: formData.fullName })
+
+    if (result?.error) {
       setToast({ message: result.error, type: 'error' })
-    } else {
-      setToast({ message: 'Name updated successfully', type: 'success' })
-      setIsEditing(false)
-      loadProfile()
+      return
     }
+
+    setToast({ message: 'Name updated successfully', type: 'success' })
+    setIsEditing(false)
   }
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    const formDataObj = new FormData()
-    formDataObj.append('new_password', passwordData.new_password)
-    formDataObj.append('confirm_password', passwordData.confirm_password)
-    
-    const result = await changePassword(formDataObj)
-    
-    if (result.error) {
-      setToast({ message: result.error, type: 'error' })
-    } else {
+
+    if (!isLoaded || !user) {
+      setToast({ message: 'Please sign in to update your password', type: 'error' })
+      return
+    }
+
+    if (!passwordData.current_password) {
+      setToast({ message: 'Current password is required', type: 'error' })
+      return
+    }
+
+    if (!passwordData.new_password || passwordData.new_password.length < 6) {
+      setToast({ message: 'Password must be at least 6 characters long', type: 'error' })
+      return
+    }
+
+    if (passwordData.new_password !== passwordData.confirm_password) {
+      setToast({ message: 'Passwords do not match', type: 'error' })
+      return
+    }
+
+    try {
+      await user.updatePassword({
+        currentPassword: passwordData.current_password,
+        newPassword: passwordData.new_password,
+      })
       setToast({ message: 'Password changed successfully', type: 'success' })
-      setPasswordData({ new_password: '', confirm_password: '' })
+      setPasswordData({ current_password: '', new_password: '', confirm_password: '' })
+    } catch (err) {
+      setToast({
+        message: err instanceof Error ? err.message : 'Failed to change password',
+        type: 'error'
+      })
     }
   }
 
   const handleDeleteAccount = async () => {
-    const result = await deleteAccount()
-    
-    if (result?.error) {
-      setToast({ message: result.error, type: 'error' })
+    if (!isLoaded || !user) {
+      setToast({ message: 'Please sign in to delete your account', type: 'error' })
+      return
+    }
+
+    try {
+      await deleteAccount()
+    } catch (err) {
+      setToast({
+        message: err instanceof Error ? err.message : 'Failed to delete account data',
+        type: 'error'
+      })
+      return
+    }
+
+    try {
+      await user.delete()
+      router.push('/?message=Account successfully deleted')
+    } catch (err) {
+      setToast({
+        message: err instanceof Error ? err.message : 'Failed to delete account',
+        type: 'error'
+      })
     }
   }
 
@@ -134,7 +177,7 @@ const ProfilePage: React.FC = () => {
             </div>
             <div className="text-center sm:text-left sm:ml-6 md:ml-4 lg:ml-4">
               <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-2">
-                {profile.full_name || 'No name set'}
+                {profile.fullName || 'No name set'}
               </h2>
               <div className="flex items-center justify-center sm:justify-start text-muted-foreground mt-1">
                 <Mail size={14} className="sm:size-4 mr-2" />
@@ -167,8 +210,8 @@ const ProfilePage: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 className="w-full px-3 py-2 sm:py-3 bg-muted border border-border text-foreground text-sm sm:text-base rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
                 placeholder="Enter your full name"
               />
@@ -185,7 +228,7 @@ const ProfilePage: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setIsEditing(false)
-                  setFormData({ full_name: profile.full_name || '' })
+                  setFormData({ fullName: profile.fullName || '' })
                 }}
                 className="px-4 py-2 sm:px-6 sm:py-2 border border-border text-muted-foreground text-sm sm:text-base rounded-lg hover:bg-muted transition-colors w-full sm:w-auto"
               >
@@ -203,6 +246,29 @@ const ProfilePage: React.FC = () => {
       <div className="bg-background border border-border rounded-xl p-4 sm:p-6">
         <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-4 sm:mb-6">Change Password</h3>
         <form onSubmit={handleChangePassword} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
+              Current Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPasswords.current ? 'text' : 'password'}
+                value={passwordData.current_password}
+                onChange={(e) => setPasswordData({ ...passwordData, current_password: e.target.value })}
+                className="w-full px-3 py-2 sm:py-3 pr-10 bg-muted border border-border text-foreground text-sm sm:text-base rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
+                placeholder="Enter current password"
+                aria-label="Current password"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
+              >
+                {showPasswords.current ? <EyeOff size={18} className="sm:size-5" /> : <Eye size={18} className="sm:size-5" />}
+              </button>
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-2">
               New Password

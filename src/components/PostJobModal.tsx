@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { useMutation } from 'convex/react'
 import { X, Briefcase, Building2, MapPin, ExternalLink, Tag, AlertCircle } from 'lucide-react'
-import { postJob } from '@/app/actions/jobs'
+import { api } from '../../convex/_generated/api'
 
 interface PostJobModalProps {
   isOpen: boolean
@@ -21,6 +22,7 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const postJob = useMutation(api.jobs.postJob)
 
   const resetForm = useCallback(() => {
     setFormData({
@@ -89,7 +91,13 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
     setError('')
 
     try {
-      const result = await postJob(formData)
+      const result = await postJob({
+        title: formData.title,
+        company: formData.company,
+        location: formData.location,
+        url: formData.url,
+        tags: formData.selectedTags,
+      })
       resetForm()
       onClose()
       onSuccess(result.message)

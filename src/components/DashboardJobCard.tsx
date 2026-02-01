@@ -1,22 +1,32 @@
 'use client'
 
 import { useState } from 'react'
-import { updateBookmarkStatus } from '@/app/actions/bookmarks'
+import { useMutation } from 'convex/react'
+import type { Id } from '../../convex/_generated/dataModel'
+import { api } from '../../convex/_generated/api'
 import { ChevronDown, ExternalLink, Edit3, Save, X } from 'lucide-react'
 
 interface Job {
-  id: number
+  id: Id<'jobs'>
   title: string
   company: string
   location: string
   url: string
-  created_at: string
-  tags: { id: number; name: string }[]
+  createdAt: number
+  tags: string[]
 }
 
+type ApplicationStatus =
+  | 'saved'
+  | 'applied'
+  | 'interviewing'
+  | 'offer'
+  | 'rejected'
+  | 'accepted'
+
 interface Bookmark {
-  id: number
-  status: string
+  id: Id<'trackedApplications'>
+  status: ApplicationStatus
   notes: string | null
   job: Job
 }
@@ -25,7 +35,7 @@ interface DashboardJobCardProps {
   bookmark: Bookmark
 }
 
-const statusOptions = [
+const statusOptions: Array<{ value: ApplicationStatus; label: string; color: string }> = [
   { value: 'saved', label: 'Saved', color: 'bg-muted text-muted-foreground' },
   { value: 'applied', label: 'Applied', color: 'bg-blue-700 text-blue-300' },
   { value: 'interviewing', label: 'Interviewing', color: 'bg-yellow-700 text-yellow-300' },
@@ -39,14 +49,18 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
   const [showDropdown, setShowDropdown] = useState(false)
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [notes, setNotes] = useState(bookmark.notes || '')
-  const [currentStatus, setCurrentStatus] = useState(bookmark.status)
+  const [currentStatus, setCurrentStatus] = useState<ApplicationStatus>(bookmark.status)
+  const updateBookmarkStatus = useMutation(api.bookmarks.updateBookmarkStatus)
 
   const currentStatusOption = statusOptions.find(option => option.value === currentStatus)
 
-  const handleStatusUpdate = async (newStatus: string) => {
+  const handleStatusUpdate = async (newStatus: ApplicationStatus) => {
     setIsUpdating(true)
     try {
-      await updateBookmarkStatus(bookmark.id, newStatus)
+      await updateBookmarkStatus({
+        bookmarkId: bookmark.id,
+        status: newStatus,
+      })
       setCurrentStatus(newStatus)
       setShowDropdown(false)
     } catch (error) {
@@ -60,7 +74,11 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
   const handleNotesUpdate = async () => {
     setIsUpdating(true)
     try {
-      await updateBookmarkStatus(bookmark.id, currentStatus, notes)
+      await updateBookmarkStatus({
+        bookmarkId: bookmark.id,
+        status: currentStatus,
+        notes,
+      })
       setIsEditingNotes(false)
     } catch (error) {
       console.error('Error updating notes:', error)
@@ -135,7 +153,7 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
         <span className="text-muted-foreground text-sm">
-          Posted {new Date(bookmark.job.created_at).toLocaleDateString('en-US', { 
+          Posted {new Date(bookmark.job.createdAt).toLocaleDateString('en-US', { 
             year: 'numeric', 
             month: 'short', 
             day: 'numeric' 
@@ -148,10 +166,10 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
         <div className="flex flex-wrap gap-2 mb-4">
           {bookmark.job.tags.map((tag) => (
             <span
-              key={tag.id}
+              key={tag}
               className="bg-secondary text-secondary-foreground px-2 py-1 rounded text-xs font-medium border border-primary"
             >
-              {tag.name}
+              {tag}
             </span>
           ))}
         </div>
