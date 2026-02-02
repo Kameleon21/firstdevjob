@@ -4,9 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface HeroSectionProps {
   onPostJobClick: () => void;
+  onAuthClick?: () => void;
 }
 
-export default function HeroSection({ onPostJobClick }: HeroSectionProps) {
+export default function HeroSection({ onPostJobClick, onAuthClick }: HeroSectionProps) {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
@@ -43,7 +44,7 @@ export default function HeroSection({ onPostJobClick }: HeroSectionProps) {
           </button>
           {!isLoading && !isAuthenticated && (
             <button
-              onClick={() => console.log("Sign Up to Track Jobs clicked")}
+              onClick={() => onAuthClick?.()}
               className="w-full sm:w-auto px-6 py-3 border border-primary text-accent rounded-xl hover:bg-secondary transition-colors font-semibold text-sm sm:text-base"
             >
               Sign Up to Track

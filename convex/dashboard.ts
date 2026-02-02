@@ -115,7 +115,7 @@ export const getDashboardData = query({
       company: string;
       location: string;
       url: string;
-      status: "pending" | "approved" | "rejected";
+      status: "pending" | "approved" | "rejected" | "outdated";
       tags: string[];
     }> = [];
 

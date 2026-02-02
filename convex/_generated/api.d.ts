@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as bookmarks from "../bookmarks.js";
+import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as jobs from "../jobs.js";
 import type * as profiles from "../profiles.js";
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
   bookmarks: typeof bookmarks;
+  crons: typeof crons;
   dashboard: typeof dashboard;
   jobs: typeof jobs;
   profiles: typeof profiles;
