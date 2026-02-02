@@ -44,38 +44,35 @@ export default function JobCard({ job, searchQuery = '' }: JobCardProps) {
         <h3 className="text-xl font-semibold text-foreground pr-4">
           {highlightText(job.title, searchQuery, '', 'var(--highlight-background)', 'var(--highlight-foreground)')}
         </h3>
-        <button
-          type="button"
-          disabled={isLoading || isToggling}
-          onClick={async () => {
-            if (!isAuthenticated) {
-              router.push('/auth/login?message=Please sign in to bookmark jobs')
-              return
-            }
-
-            setIsToggling(true)
-            try {
-              await toggleBookmark({ jobId: job._id })
-            } catch (error) {
-              console.error('Error toggling bookmark:', error)
-            } finally {
-              setIsToggling(false)
-            }
-          }}
-          className={`transition-colors ${
-            isBookmarked ? 'text-accent' : 'text-muted-foreground'
-          } ${isLoading || isToggling ? 'opacity-50 cursor-not-allowed' : 'hover:text-accent'}`}
-          title={isBookmarked ? 'Remove bookmark' : 'Save job'}
-        >
-          <svg
-            className="w-5 h-5"
-            fill={isBookmarked ? 'currentColor' : 'none'}
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {isAuthenticated && (
+          <button
+            type="button"
+            disabled={isLoading || isToggling}
+            onClick={async () => {
+              setIsToggling(true)
+              try {
+                await toggleBookmark({ jobId: job._id })
+              } catch (error) {
+                console.error('Error toggling bookmark:', error)
+              } finally {
+                setIsToggling(false)
+              }
+            }}
+            className={`transition-colors ${
+              isBookmarked ? 'text-accent' : 'text-muted-foreground'
+            } ${isLoading || isToggling ? 'opacity-50 cursor-not-allowed' : 'hover:text-accent'}`}
+            title={isBookmarked ? 'Remove bookmark' : 'Save job'}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-          </svg>
-        </button>
+            <svg
+              className="w-5 h-5"
+              fill={isBookmarked ? 'currentColor' : 'none'}
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+          </button>
+        )}
       </div>
       
       {/* Company with building icon */}
