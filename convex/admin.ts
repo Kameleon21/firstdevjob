@@ -103,3 +103,57 @@ export const updateJobStatus = mutation({
     return { success: true };
   },
 });
+
+export const getApprovedJobs = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireModOrAdmin(ctx);
+
+    const jobs = await ctx.db
+      .query("jobs")
+      .filter((q) => q.eq(q.field("status"), "approved"))
+      .order("desc")
+      .collect();
+
+    return jobs.map((job) => ({
+      id: job._id,
+      createdAt: job._creationTime,
+      title: job.title,
+      company: job.company,
+      location: job.location ?? "",
+      url: job.url ?? "",
+      status: job.status,
+      tags: job.tags ?? [],
+    }));
+  },
+});
+
+export const deleteJob = mutation({
+  args: { jobId: v.id("jobs") },
+  handler: async (ctx, args) => {
+    await requireModOrAdmin(ctx);
+
+    // Delete all trackedApplications referencing this job
+    const bookmarks = await ctx.db
+      .query("trackedApplications")
+      .filter((q) => q.eq(q.field("jobId"), args.jobId))
+      .collect();
+
+    for (const bookmark of bookmarks) {
+      await ctx.db.delete(bookmark._id);
+    }
+
+    // Delete the job
+    await ctx.db.delete(args.jobId);
+    return { success: true };
+  },
+});
+
+export const markJobOutdated = mutation({
+  args: { jobId: v.id("jobs") },
+  handler: async (ctx, args) => {
+    await requireModOrAdmin(ctx);
+    await ctx.db.patch(args.jobId, { status: "outdated" });
+    return { success: true };
+  },
+});

@@ -13,8 +13,13 @@ const PostJobModal = dynamic(() => import('./PostJobModal'), {
   ssr: false,
 })
 
+const AuthModal = dynamic(() => import('./AuthModal'), {
+  ssr: false,
+})
+
 export default function PageWrapper() {
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
 
@@ -38,8 +43,9 @@ export default function PageWrapper() {
     <div className="min-h-screen bg-background">
       <Header onPostJobClick={handleOpenPostJobModal} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <HeroSection 
+        <HeroSection
           onPostJobClick={handleOpenPostJobModal}
+          onAuthClick={() => setIsAuthModalOpen(true)}
         />
         <div className="mt-16">
           <JobSearchWrapper allTags={resolvedTags} />
@@ -53,6 +59,14 @@ export default function PageWrapper() {
           onClose={handleClosePostJobModal}
           allTags={resolvedTags}
           onSuccess={handleJobPostSuccess}
+        />
+      )}
+
+      {/* Auth Modal */}
+      {isAuthModalOpen && (
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
         />
       )}
 

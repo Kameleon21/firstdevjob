@@ -1,5 +1,33 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+
+export const deleteOldJobs = internalMutation({
+  handler: async (ctx) => {
+    const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+
+    // Get ALL jobs older than 2 weeks (any status)
+    const oldJobs = await ctx.db
+      .query("jobs")
+      .filter((q) => q.lt(q.field("_creationTime"), twoWeeksAgo))
+      .collect();
+
+    for (const job of oldJobs) {
+      // Delete related bookmarks first
+      const bookmarks = await ctx.db
+        .query("trackedApplications")
+        .filter((q) => q.eq(q.field("jobId"), job._id))
+        .collect();
+
+      for (const bookmark of bookmarks) {
+        await ctx.db.delete(bookmark._id);
+      }
+
+      await ctx.db.delete(job._id);
+    }
+
+    return { deletedCount: oldJobs.length };
+  },
+});
 
 export const listApprovedJobs = query({
   args: {

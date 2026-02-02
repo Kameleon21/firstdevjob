@@ -21,6 +21,7 @@ export default defineSchema({
       v.literal("pending"),
       v.literal("approved"),
       v.literal("rejected"),
+      v.literal("outdated"),
     ),
     tags: v.optional(v.array(v.string())),
   }),
