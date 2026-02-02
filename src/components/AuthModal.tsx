@@ -2,7 +2,19 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useSignIn, useSignUp, useUser } from "@clerk/nextjs";
-import { X, LogIn, UserPlus, Sparkles, Mail, Lock, Github, Loader2, Eye, EyeOff, User } from "lucide-react";
+import {
+  X,
+  LogIn,
+  UserPlus,
+  Sparkles,
+  Mail,
+  Lock,
+  Github,
+  Loader2,
+  Eye,
+  EyeOff,
+  User,
+} from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -81,7 +93,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         onClose();
       }
     },
-    [onClose]
+    [onClose],
   );
 
   const handleTabSwitch = (tab: AuthTab) => {
@@ -97,8 +109,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
   };
 
-  // OAuth sign in (Google/GitHub)
-  const handleOAuthSignIn = async (provider: "oauth_google" | "oauth_github") => {
+  // OAuth sign in (GitHub)
+  const handleOAuthSignIn = async (provider: "oauth_github") => {
     if (!signInLoaded || !signIn) return;
 
     try {
@@ -110,7 +122,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         redirectUrlComplete: "/",
       });
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "OAuth sign in failed";
+      const errorMessage =
+        err instanceof Error ? err.message : "OAuth sign in failed";
       setError(errorMessage);
       setIsLoading(false);
     }
@@ -138,7 +151,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       }
     } catch (err: unknown) {
       const clerkError = err as { errors?: { message: string }[] };
-      const errorMessage = clerkError.errors?.[0]?.message || "Sign in failed. Please check your credentials.";
+      const errorMessage =
+        clerkError.errors?.[0]?.message ||
+        "Sign in failed. Please check your credentials.";
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -178,7 +193,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       setPendingVerification(true);
     } catch (err: unknown) {
       const clerkError = err as { errors?: { message: string }[] };
-      const errorMessage = clerkError.errors?.[0]?.message || "Sign up failed. Please try again.";
+      const errorMessage =
+        clerkError.errors?.[0]?.message || "Sign up failed. Please try again.";
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -198,19 +214,22 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         code: verificationCode,
       });
 
-      console.log("Verification result:", result);
-      console.log("Status:", result.status);
-      console.log("Session ID:", result.createdSessionId);
-
       if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        window.location.reload();
+        if (result.createdSessionId) {
+          await setActive({ session: result.createdSessionId });
+          window.location.reload();
+        } else {
+          setError(
+            "Verification completed but session could not be created. Please try signing in.",
+          );
+        }
       } else {
-        setError(`Verification status: ${result.status}. Please check console for details.`);
+        setError("Verification could not be completed. Please try again.");
       }
     } catch (err: unknown) {
       const clerkError = err as { errors?: { message: string }[] };
-      const errorMessage = clerkError.errors?.[0]?.message || "Invalid verification code.";
+      const errorMessage =
+        clerkError.errors?.[0]?.message || "Invalid verification code.";
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -385,7 +404,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
 
               {/* Email/Password Form */}
-              <form onSubmit={activeTab === "signin" ? handleEmailSignIn : handleEmailSignUp} className="space-y-4">
+              <form
+                onSubmit={
+                  activeTab === "signin" ? handleEmailSignIn : handleEmailSignUp
+                }
+                className="space-y-4"
+              >
                 {/* Name fields - only for sign up */}
                 {activeTab === "signup" && (
                   <div className="grid grid-cols-2 gap-3">
@@ -453,7 +477,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -476,10 +504,16 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       />
                       <button
                         type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        {showConfirmPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
                       </button>
                     </div>
                   </div>
