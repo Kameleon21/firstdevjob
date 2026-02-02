@@ -4,14 +4,26 @@ import { v } from "convex/values";
 export const deleteOldJobs = internalMutation({
   handler: async (ctx) => {
     const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
-    // Get ALL jobs older than 2 weeks (any status)
-    const oldJobs = await ctx.db
+    let deletedCount = 0;
+    let markedOutdatedCount = 0;
+
+    // 1. Hard delete old pending/rejected jobs (older than 2 weeks)
+    const oldNonApprovedJobs = await ctx.db
       .query("jobs")
-      .filter((q) => q.lt(q.field("_creationTime"), twoWeeksAgo))
+      .filter((q) =>
+        q.and(
+          q.lt(q.field("_creationTime"), twoWeeksAgo),
+          q.or(
+            q.eq(q.field("status"), "pending"),
+            q.eq(q.field("status"), "rejected")
+          )
+        )
+      )
       .collect();
 
-    for (const job of oldJobs) {
+    for (const job of oldNonApprovedJobs) {
       // Delete related bookmarks first
       const bookmarks = await ctx.db
         .query("trackedApplications")
@@ -23,9 +35,52 @@ export const deleteOldJobs = internalMutation({
       }
 
       await ctx.db.delete(job._id);
+      deletedCount++;
     }
 
-    return { deletedCount: oldJobs.length };
+    // 2. Soft delete: Mark approved jobs as "outdated" after 2 weeks
+    const oldApprovedJobs = await ctx.db
+      .query("jobs")
+      .filter((q) =>
+        q.and(
+          q.lt(q.field("_creationTime"), twoWeeksAgo),
+          q.eq(q.field("status"), "approved")
+        )
+      )
+      .collect();
+
+    for (const job of oldApprovedJobs) {
+      await ctx.db.patch(job._id, { status: "outdated" });
+      markedOutdatedCount++;
+    }
+
+    // 3. Hard delete outdated jobs after 30 days (extended retention)
+    const oldOutdatedJobs = await ctx.db
+      .query("jobs")
+      .filter((q) =>
+        q.and(
+          q.lt(q.field("_creationTime"), thirtyDaysAgo),
+          q.eq(q.field("status"), "outdated")
+        )
+      )
+      .collect();
+
+    for (const job of oldOutdatedJobs) {
+      // Delete related bookmarks first
+      const bookmarks = await ctx.db
+        .query("trackedApplications")
+        .filter((q) => q.eq(q.field("jobId"), job._id))
+        .collect();
+
+      for (const bookmark of bookmarks) {
+        await ctx.db.delete(bookmark._id);
+      }
+
+      await ctx.db.delete(job._id);
+      deletedCount++;
+    }
+
+    return { deletedCount, markedOutdatedCount };
   },
 });
 
