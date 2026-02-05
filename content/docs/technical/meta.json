@@ -1,0 +1,4 @@
+{
+  "title": "Technical",
+  "pages": ["project-structure", "database-schema", "deployment", "contributing"]
+}

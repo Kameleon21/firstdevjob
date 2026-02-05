@@ -13,6 +13,7 @@ import {
   LogOut,
   Sun,
   Moon,
+  BookOpen,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import AuthModal from "./AuthModal";
@@ -90,6 +91,18 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               <Plus size={20} className="mr-2" />
               Post Job
             </button>
+
+            <Link
+              href="/docs"
+              className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                pathname?.startsWith("/docs")
+                  ? "bg-secondary text-secondary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <BookOpen size={20} className="mr-2" />
+              Docs
+            </Link>
           </nav>
 
           {/* Auth Section */}
@@ -193,6 +206,19 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
               <Plus size={20} className="mr-3" />
               Post Job
             </button>
+
+            <Link
+              href="/docs"
+              onClick={toggleMobileMenu}
+              className={`flex items-center w-full px-4 py-2 transition-colors ${
+                pathname?.startsWith("/docs")
+                  ? "bg-secondary text-secondary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+            >
+              <BookOpen size={20} className="mr-3" />
+              Docs
+            </Link>
 
             {!isLoading && isAuthenticated && (
               <Link

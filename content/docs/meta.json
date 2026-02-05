@@ -1,0 +1,10 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "user-guide",
+    "architecture",
+    "technical",
+    "api-reference"
+  ]
+}

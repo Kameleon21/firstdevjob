@@ -1,0 +1,70 @@
+---
+title: Authentication
+description: How authentication works with Clerk and Convex
+---
+
+# Authentication
+
+FirstDevJob uses Clerk for authentication, integrated with Convex for backend authorization.
+
+## Auth Providers
+
+Users can sign in with:
+
+- **GitHub** - OAuth 2.0
+- **Email** - Magic link or password
+
+## Integration Architecture
+
+```
+User → Clerk → JWT Token → Convex → Validate → Execute
+```
+
+### Frontend Setup
+
+The app is wrapped with `ClerkProvider`:
+
+```tsx
+<ClerkProvider>
+  <ConvexClientProvider>
+    {children}
+  </ConvexClientProvider>
+</ClerkProvider>
+```
+
+### Backend Validation
+
+Convex functions access user identity:
+
+```typescript
+export const myFunction = mutation({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // User is authenticated
+    const userId = identity.subject;
+  },
+});
+```
+
+## Protected Routes
+
+Use Clerk's middleware for route protection:
+
+- `/admin/*` - Requires admin role
+- `/profile/*` - Requires authentication
+- `/` - Public access
+
+## User Roles
+
+| Role | Capabilities |
+|------|-------------|
+| User | Browse, bookmark, track applications |
+| Moderator | Approve/reject job submissions |
+| Admin | Full access, user management |
+
+Roles are stored in Clerk metadata and synced to Convex.

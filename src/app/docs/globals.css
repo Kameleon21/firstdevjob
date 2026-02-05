@@ -1,0 +1,59 @@
+@import "fumadocs-ui/style.css";
+
+/* Light mode - Fumadocs color overrides */
+:root,
+:root[data-theme="light"] {
+  --color-fd-background: var(--background);
+  --color-fd-foreground: var(--foreground);
+  --color-fd-muted: var(--muted);
+  --color-fd-muted-foreground: var(--muted-foreground);
+  --color-fd-card: var(--background);
+  --color-fd-popover: var(--background);
+  --color-fd-popover-foreground: var(--foreground);
+  --color-fd-primary: var(--primary);
+  --color-fd-accent: var(--accent);
+  --color-fd-border: var(--border);
+  --fd-code-bg: #f8fafc;
+  --fd-code-border: #e2e8f0;
+  --shiki-light-bg: var(--fd-code-bg);
+  --shiki-dark-bg: #0b1220;
+}
+
+/* Dark mode - Fumadocs color overrides */
+:root[data-theme="dark"] {
+  --color-fd-background: var(--background);
+  --color-fd-foreground: var(--foreground);
+  --color-fd-muted: var(--muted);
+  --color-fd-muted-foreground: var(--muted-foreground);
+  --color-fd-card: var(--background);
+  --color-fd-popover: var(--background);
+  --color-fd-popover-foreground: var(--foreground);
+  --color-fd-primary: var(--primary);
+  --color-fd-accent: var(--accent);
+  --color-fd-border: var(--border);
+  --fd-code-bg: #0b1220;
+  --fd-code-border: #1f2937;
+  --shiki-light-bg: var(--fd-code-bg);
+  --shiki-dark-bg: var(--fd-code-bg);
+}
+
+/* Code block theming */
+.shiki:not(.not-fumadocs-codeblock *) {
+  background-color: var(--fd-code-bg);
+  border-color: var(--fd-code-border);
+}
+
+:root[data-theme="dark"] .shiki:not(.not-fumadocs-codeblock *) code span {
+  color: var(--shiki-dark);
+}
+
+/* Fix search input visibility */
+[data-dialog] input[type="text"],
+[data-dialog] input:not([type]) {
+  color: var(--color-fd-foreground) !important;
+}
+
+[data-dialog] input::placeholder {
+  color: var(--color-fd-muted-foreground) !important;
+  opacity: 0.7;
+}

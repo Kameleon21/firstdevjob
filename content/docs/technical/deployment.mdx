@@ -1,0 +1,71 @@
+---
+title: Deployment
+description: How to deploy FirstDevJob
+---
+
+# Deployment
+
+FirstDevJob is deployed on Vercel with Convex as the backend.
+
+## Prerequisites
+
+- Vercel account
+- Convex account
+- Clerk account
+
+## Environment Variables
+
+### Vercel (Frontend)
+
+```
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+NEXT_PUBLIC_CONVEX_URL=https://...convex.cloud
+```
+
+### Convex (Backend)
+
+```
+CLERK_ISSUER_URL=https://...clerk.accounts.dev
+```
+
+## Deployment Steps
+
+### 1. Deploy Convex
+
+```bash
+bunx convex deploy
+```
+
+This deploys the backend functions and schema.
+
+### 2. Deploy to Vercel
+
+Connect your GitHub repository to Vercel. On push to main:
+
+1. Vercel builds the Next.js app
+2. Static pages are generated
+3. App is deployed to edge network
+
+### 3. Configure Domains
+
+- Set up custom domain in Vercel
+- Update Clerk allowed origins
+- Update Convex CORS settings if needed
+
+## CI/CD
+
+GitHub Actions handle:
+
+- Type checking on PR
+- Lint checks
+- Test runs
+- Preview deployments
+
+Merge to main triggers production deployment.
+
+## Monitoring
+
+- **Vercel**: Frontend analytics, error tracking
+- **Convex**: Function logs, database metrics
+- **Clerk**: Auth events, user sessions
