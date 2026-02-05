@@ -80,6 +80,17 @@ bun run lint       # Lint code
 bun run test       # Run tests
 ```
 
+## Documentation
+
+Full documentation is available at [/docs](https://firstdevjob.com/docs) covering:
+
+- **User Guide** - Getting started, browsing jobs, posting jobs, tracking applications
+- **Architecture** - System overview, tech stack, data flow, authentication
+- **Technical** - Database schema, deployment, contributing guidelines
+- **API Reference** - Jobs, bookmarks, profiles, and admin APIs
+
+To run the docs locally, start the dev server (`bun run dev`) and visit `http://localhost:3000/docs`.
+
 ## Contributing
 
 1. Fork the repo
