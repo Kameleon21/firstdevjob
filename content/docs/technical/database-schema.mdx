@@ -1,0 +1,68 @@
+---
+title: Database Schema
+description: Convex database tables and relationships
+---
+
+# Database Schema
+
+FirstDevJob uses Convex as its database. The schema is defined in TypeScript.
+
+## Tables
+
+### jobs
+
+Stores all job listings.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Job title |
+| `company` | string | Company name |
+| `location` | string | Job location |
+| `jobType` | string | full-time, part-time, internship, contract |
+| `description` | string | Full job description |
+| `applyUrl` | string | Application link |
+| `tags` | string[] | Technology tags |
+| `status` | string | pending, approved, rejected, outdated |
+| `submittedBy` | string? | User ID who submitted |
+| `createdAt` | number | Timestamp |
+
+### bookmarks
+
+Tracks user bookmarks.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | User ID |
+| `jobId` | Id\<"jobs"\> | Reference to job |
+| `createdAt` | number | When bookmarked |
+
+### trackedApplications
+
+Application tracking data.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | User ID |
+| `jobId` | Id\<"jobs"\> | Reference to job |
+| `status` | string | bookmarked, applied, interview, offer, rejected |
+| `notes` | string? | User notes |
+| `updatedAt` | number | Last update |
+
+### profiles
+
+User profile information.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | Clerk user ID |
+| `displayName` | string? | Display name |
+| `bio` | string? | User bio |
+| `links` | object? | Social links |
+
+## Indexes
+
+Key indexes for query performance:
+
+- `jobs.by_status` - Filter jobs by approval status
+- `bookmarks.by_user` - Get user's bookmarks
+- `trackedApplications.by_user_and_job` - Unique tracking per job

@@ -1,0 +1,4 @@
+{
+  "title": "Architecture",
+  "pages": ["overview", "tech-stack", "data-flow", "authentication"]
+}

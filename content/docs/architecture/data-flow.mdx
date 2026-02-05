@@ -1,0 +1,67 @@
+---
+title: Data Flow
+description: How data moves through the application
+---
+
+# Data Flow
+
+Understanding how data flows through FirstDevJob helps when debugging or adding features.
+
+## Request Types
+
+### Queries (Read Operations)
+
+Queries fetch data and automatically subscribe to updates:
+
+```typescript
+// Component subscribes to job listings
+const jobs = useQuery(api.jobs.listApproved);
+
+// Automatically updates when data changes
+```
+
+### Mutations (Write Operations)
+
+Mutations modify data and trigger subscription updates:
+
+```typescript
+// Submit a new job
+const submitJob = useMutation(api.jobs.submit);
+
+await submitJob({
+  title: "Junior Developer",
+  company: "Acme Inc",
+  // ...
+});
+```
+
+## Authentication Flow
+
+1. User clicks Sign In
+2. Clerk modal opens
+3. User authenticates (OAuth or email)
+4. Clerk returns JWT token
+5. Convex validates token on each request
+6. User identity available in backend functions
+
+## Job Lifecycle
+
+```
+Submit → Pending → Approved → Listed
+                ↘ Rejected
+
+After 2 weeks:
+Approved → Outdated → Deleted (30 days)
+Pending/Rejected → Deleted
+```
+
+## Real-time Updates
+
+Convex automatically pushes updates to subscribed clients:
+
+1. Admin approves a job
+2. Convex mutation updates database
+3. All clients with active `listApproved` query receive update
+4. UI re-renders with new data
+
+No polling or manual refresh needed.

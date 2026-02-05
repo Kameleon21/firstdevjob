@@ -1,0 +1,56 @@
+---
+title: Architecture Overview
+description: System architecture and design decisions
+---
+
+# Architecture Overview
+
+FirstDevJob is built with a modern, serverless architecture optimized for real-time updates and developer experience.
+
+## System Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         Client                              │
+│  ┌─────────────────┐    ┌─────────────────┐                │
+│  │   Next.js App   │───▶│ React Components │                │
+│  └─────────────────┘    └─────────────────┘                │
+└─────────────────────────────────────────────────────────────┘
+              │                      │
+              ▼                      ▼
+┌─────────────────────┐    ┌─────────────────────┐
+│       Clerk         │    │       Convex        │
+│   Authentication    │◀──▶│   Backend + DB      │
+└─────────────────────┘    └─────────────────────┘
+```
+
+## Key Components
+
+### Frontend (Next.js)
+
+- Server-side rendering for SEO
+- React components with TypeScript
+- Tailwind CSS for styling
+- Real-time data subscriptions
+
+### Authentication (Clerk)
+
+- OAuth providers GitHub
+- Email/password authentication
+- Session management
+- User profile management
+
+### Backend (Convex)
+
+- Real-time database with subscriptions
+- Type-safe queries and mutations
+- Automatic caching and optimization
+- Cron jobs for scheduled tasks
+
+## Data Flow
+
+1. User interacts with React component
+2. Component calls Convex query/mutation
+3. Convex validates request and checks auth
+4. Database operation executes
+5. Real-time update pushed to all clients

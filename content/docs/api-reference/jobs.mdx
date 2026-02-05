@@ -1,0 +1,78 @@
+---
+title: Jobs API
+description: Convex functions for job listings
+---
+
+# Jobs API
+
+Functions for managing job listings.
+
+## Queries
+
+### `listApproved`
+
+Get all approved job listings.
+
+```typescript
+const jobs = useQuery(api.jobs.listApproved);
+```
+
+**Returns:** Array of approved jobs, sorted by creation date (newest first).
+
+### `getById`
+
+Get a single job by ID.
+
+```typescript
+const job = useQuery(api.jobs.getById, { id: jobId });
+```
+
+**Parameters:**
+- `id` - Job ID
+
+**Returns:** Job object or null if not found.
+
+## Mutations
+
+### `submit`
+
+Submit a new job for review.
+
+```typescript
+const submitJob = useMutation(api.jobs.submit);
+
+await submitJob({
+  title: "Junior Developer",
+  company: "Acme Inc",
+  location: "Remote",
+  jobType: "full-time",
+  description: "...",
+  applyUrl: "https://...",
+  tags: ["React", "TypeScript"],
+});
+```
+
+**Authentication:** Required
+
+**Parameters:**
+| Field | Type | Required |
+|-------|------|----------|
+| title | string | Yes |
+| company | string | Yes |
+| location | string | Yes |
+| jobType | string | Yes |
+| description | string | Yes |
+| applyUrl | string | Yes |
+| tags | string[] | No |
+
+**Returns:** ID of created job.
+
+## Internal Functions
+
+### `deleteOldJobs`
+
+Cron job that cleans up old listings:
+
+- Pending/rejected jobs older than 2 weeks: deleted
+- Approved jobs older than 2 weeks: marked as "outdated"
+- Outdated jobs older than 30 days: deleted

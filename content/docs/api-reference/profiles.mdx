@@ -1,0 +1,79 @@
+---
+title: Profiles API
+description: Convex functions for user profiles
+---
+
+# Profiles API
+
+Functions for managing user profile information.
+
+## Queries
+
+### `get`
+
+Get the current user's profile.
+
+```typescript
+const profile = useQuery(api.profiles.get);
+```
+
+**Authentication:** Required
+
+**Returns:** Profile object or null if not created.
+
+### `getByUserId`
+
+Get a profile by user ID (for viewing other users).
+
+```typescript
+const profile = useQuery(api.profiles.getByUserId, { userId });
+```
+
+**Parameters:**
+- `userId` - Clerk user ID
+
+**Returns:** Public profile data.
+
+## Mutations
+
+### `update`
+
+Update the current user's profile.
+
+```typescript
+const updateProfile = useMutation(api.profiles.update);
+
+await updateProfile({
+  displayName: "Jane Developer",
+  bio: "Frontend developer learning React",
+  links: {
+    github: "https://github.com/jane",
+    linkedin: "https://linkedin.com/in/jane",
+  },
+});
+```
+
+**Authentication:** Required
+
+**Parameters:**
+| Field | Type | Required |
+|-------|------|----------|
+| displayName | string | No |
+| bio | string | No |
+| links | object | No |
+
+**Returns:** Updated profile object.
+
+### `create`
+
+Create a profile for a new user (called automatically on first sign-in).
+
+```typescript
+const createProfile = useMutation(api.profiles.create);
+
+await createProfile({
+  displayName: identity.name,
+});
+```
+
+**Authentication:** Required

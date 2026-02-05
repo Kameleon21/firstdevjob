@@ -1,0 +1,101 @@
+---
+title: Admin API
+description: Convex functions for admin operations
+---
+
+# Admin API
+
+Functions for moderating jobs and managing the platform.
+
+## Queries
+
+### `listPending`
+
+Get all jobs pending review.
+
+```typescript
+const pending = useQuery(api.admin.listPending);
+```
+
+**Authentication:** Admin or Moderator role required
+
+**Returns:** Array of pending job submissions.
+
+### `listAll`
+
+Get all jobs with any status.
+
+```typescript
+const allJobs = useQuery(api.admin.listAll);
+```
+
+**Authentication:** Admin role required
+
+**Returns:** Array of all jobs.
+
+## Mutations
+
+### `approve`
+
+Approve a pending job submission.
+
+```typescript
+const approve = useMutation(api.admin.approve);
+
+await approve({ jobId });
+```
+
+**Authentication:** Admin or Moderator role required
+
+**Parameters:**
+- `jobId` - ID of job to approve
+
+**Returns:** Updated job object.
+
+### `reject`
+
+Reject a pending job submission.
+
+```typescript
+const reject = useMutation(api.admin.reject);
+
+await reject({ jobId, reason: "Not entry-level position" });
+```
+
+**Authentication:** Admin or Moderator role required
+
+**Parameters:**
+- `jobId` - ID of job to reject
+- `reason` - Optional rejection reason
+
+**Returns:** Updated job object.
+
+### `delete`
+
+Permanently delete a job.
+
+```typescript
+const deleteJob = useMutation(api.admin.delete);
+
+await deleteJob({ jobId });
+```
+
+**Authentication:** Admin role required
+
+**Parameters:**
+- `jobId` - ID of job to delete
+
+**Returns:** Confirmation object.
+
+## Role Checking
+
+Admin functions validate user roles from Clerk metadata:
+
+```typescript
+const identity = await ctx.auth.getUserIdentity();
+const role = identity?.publicMetadata?.role;
+
+if (role !== "admin" && role !== "moderator") {
+  throw new Error("Unauthorized");
+}
+```

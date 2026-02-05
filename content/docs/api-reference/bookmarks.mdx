@@ -1,0 +1,83 @@
+---
+title: Bookmarks API
+description: Convex functions for bookmarking jobs
+---
+
+# Bookmarks API
+
+Functions for saving and managing bookmarked jobs.
+
+## Queries
+
+### `getUserBookmarks`
+
+Get all bookmarks for the current user.
+
+```typescript
+const bookmarks = useQuery(api.bookmarks.getUserBookmarks);
+```
+
+**Authentication:** Required
+
+**Returns:** Array of bookmark objects with populated job data.
+
+### `isBookmarked`
+
+Check if a job is bookmarked by the current user.
+
+```typescript
+const isBookmarked = useQuery(api.bookmarks.isBookmarked, { jobId });
+```
+
+**Authentication:** Required
+
+**Parameters:**
+- `jobId` - ID of the job to check
+
+**Returns:** Boolean indicating bookmark status.
+
+## Mutations
+
+### `toggle`
+
+Add or remove a bookmark.
+
+```typescript
+const toggleBookmark = useMutation(api.bookmarks.toggle);
+
+await toggleBookmark({ jobId });
+```
+
+**Authentication:** Required
+
+**Parameters:**
+- `jobId` - ID of the job to bookmark/unbookmark
+
+**Returns:** Object with `bookmarked` boolean.
+
+### `remove`
+
+Remove a bookmark (alias for toggle when bookmarked).
+
+```typescript
+const removeBookmark = useMutation(api.bookmarks.remove);
+
+await removeBookmark({ jobId });
+```
+
+**Authentication:** Required
+
+## Usage Example
+
+```tsx
+function BookmarkButton({ jobId }) {
+  const isBookmarked = useQuery(api.bookmarks.isBookmarked, { jobId });
+  const toggle = useMutation(api.bookmarks.toggle);
+
+  return (
+    <button onClick={() => toggle({ jobId })}>
+      {isBookmarked ? "Bookmarked" : "Bookmark"}
+    </button>
+  );
+}
+```
