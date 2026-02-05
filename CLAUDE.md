@@ -67,3 +67,10 @@
 - Save the plans in make in plan/ dir if the dir does not exist create it and name each plan something easy to understand
 - don't read the .env.local file
 - don't include yourself in commits
+- before pushing, run all CI checks locally that match `.github/workflows/`:
+  1. `bun run lint` (ESLint)
+  2. `bunx tsc --noEmit` (TypeScript type check)
+  3. `bun run test:coverage` (tests with coverage)
+  4. `bun run build` (build verification)
+  5. `bun pm scan` (security audit)
+- fix any failures before pushing — don't push broken code to the remote
