@@ -1,19 +1,34 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "convex/react";
+import type { Id } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
 import JobSearch from "./JobSearch";
 import JobCard from "./JobCard";
+import JobCardSkeleton from "./JobCardSkeleton";
 
-interface JobSearchWrapperProps {
-  allTags: string[];
-}
+type RoleLevel = "intern" | "graduate" | "earlyCareer";
+type ApprovedJob = {
+  _id: Id<"jobs">;
+  _creationTime: number;
+  title: string;
+  company: string;
+  location?: string;
+  url?: string;
+  status: "pending" | "approved" | "rejected" | "outdated";
+  tags?: string[];
+  roleLevel?: RoleLevel;
+  isBookmarked: boolean;
+};
 
-export default function JobSearchWrapper({ allTags }: JobSearchWrapperProps) {
+export default function JobSearchWrapper() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedRoleLevel, setSelectedRoleLevel] = useState<RoleLevel | "">(
+    "",
+  );
+  const [selectedLocation, setSelectedLocation] = useState("");
 
   // Debounce search query for better performance
   const DEBOUNCE_DELAY_MS = 300;
@@ -25,46 +40,56 @@ export default function JobSearchWrapper({ allTags }: JobSearchWrapperProps) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const sortedSelectedTags = useMemo(
-    () => [...selectedTags].sort(),
-    [selectedTags],
+  const filterOptions = useQuery(api.jobs.getApprovedJobFilterOptions, {});
+  const locationOptions = useMemo(
+    () => filterOptions?.locations ?? [],
+    [filterOptions?.locations],
   );
+
   const jobs = useQuery(api.jobs.listApprovedJobs, {
     searchTerm: debouncedSearchQuery.trim() || undefined,
-    selectedTags:
-      sortedSelectedTags.length > 0 ? sortedSelectedTags : undefined,
+    roleLevel: selectedRoleLevel || undefined,
+    location: selectedLocation || undefined,
   });
 
+  const lastResolvedJobsRef = useRef<ApprovedJob[] | null>(null);
+  if (jobs !== undefined) {
+    lastResolvedJobsRef.current = jobs as ApprovedJob[];
+  }
+
   const isLoading = jobs === undefined;
+  const isInitialLoading = isLoading && !lastResolvedJobsRef.current;
+  const isRefreshing = isLoading && !!lastResolvedJobsRef.current;
   const error = null as Error | null;
-  const filteredJobs = jobs ?? [];
+  const filteredJobs =
+    (jobs as ApprovedJob[] | undefined) ?? lastResolvedJobsRef.current ?? [];
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
   };
 
-  const handleTagToggle = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-    );
-  };
-
   const handleClearFilters = () => {
     setSearchQuery("");
-    setSelectedTags([]);
+    setSelectedRoleLevel("");
+    setSelectedLocation("");
   };
 
-  const hasActiveFilters = searchQuery.trim() !== "" || selectedTags.length > 0;
-  const isSearching = searchQuery !== debouncedSearchQuery || isLoading;
+  const hasActiveFilters =
+    searchQuery.trim() !== "" ||
+    selectedRoleLevel !== "" ||
+    selectedLocation !== "";
+  const isSearching = searchQuery !== debouncedSearchQuery || isRefreshing;
 
   return (
     <div className="space-y-12">
       <JobSearch
         searchQuery={searchQuery}
-        selectedTags={selectedTags}
-        allTags={allTags}
+        selectedRoleLevel={selectedRoleLevel}
+        selectedLocation={selectedLocation}
+        locationOptions={locationOptions}
         onSearchChange={handleSearchChange}
-        onTagToggle={handleTagToggle}
+        onRoleLevelChange={setSelectedRoleLevel}
+        onLocationChange={setSelectedLocation}
         onClearFilters={handleClearFilters}
       />
 
@@ -107,7 +132,9 @@ export default function JobSearchWrapper({ allTags }: JobSearchWrapperProps) {
                 {hasActiveFilters ? "Search Results" : "Latest Jobs"}
               </h2>
               <span className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm">
-                {filteredJobs.length} job{filteredJobs.length !== 1 ? "s" : ""}
+                {isInitialLoading
+                  ? "Loading..."
+                  : `${filteredJobs.length} job${filteredJobs.length !== 1 ? "s" : ""}`}
               </span>
             </div>
 
@@ -158,7 +185,16 @@ export default function JobSearchWrapper({ allTags }: JobSearchWrapperProps) {
         )}
 
         {/* Jobs Grid */}
-        {!error && filteredJobs.length === 0 ? (
+        {!error && isInitialLoading ? (
+          <div
+            data-testid="job-skeleton-grid"
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8"
+          >
+            {Array.from({ length: 6 }).map((_, index) => (
+              <JobCardSkeleton key={`job-skeleton-${index}`} />
+            ))}
+          </div>
+        ) : !error && filteredJobs.length === 0 ? (
           <div className="text-center py-16">
             <div className="bg-background border border-border rounded-2xl shadow-xl p-12 max-w-md mx-auto">
               <div className="mb-6">
@@ -181,7 +217,7 @@ export default function JobSearchWrapper({ allTags }: JobSearchWrapperProps) {
               </h3>
               <p className="text-muted-foreground text-base mb-6">
                 {hasActiveFilters
-                  ? "Try adjusting your search terms or selected tags to find more opportunities."
+                  ? "Try adjusting your search terms, role level, or location filters to find more opportunities."
                   : "There are currently no approved jobs available. Check back later for new opportunities!"}
               </p>
               {hasActiveFilters && (
@@ -202,6 +238,7 @@ export default function JobSearchWrapper({ allTags }: JobSearchWrapperProps) {
                   key={job._id}
                   job={job}
                   searchQuery={debouncedSearchQuery}
+                  isBookmarked={job.isBookmarked}
                 />
               ))}
             </div>

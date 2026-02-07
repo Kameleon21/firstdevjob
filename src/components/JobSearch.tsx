@@ -2,23 +2,37 @@
 
 import { Search, X } from 'lucide-react'
 
+type RoleLevel = 'intern' | 'graduate' | 'earlyCareer'
+
 interface JobSearchProps {
   searchQuery: string
-  selectedTags: string[]
-  allTags: string[]
+  selectedRoleLevel: RoleLevel | ''
+  selectedLocation: string
+  locationOptions: string[]
   onSearchChange: (query: string) => void
-  onTagToggle: (tag: string) => void
+  onRoleLevelChange: (roleLevel: RoleLevel | '') => void
+  onLocationChange: (location: string) => void
   onClearFilters: () => void
 }
 
+const roleLevelOptions: Array<{ value: RoleLevel; label: string }> = [
+  { value: 'intern', label: 'Intern' },
+  { value: 'graduate', label: 'Graduate' },
+  { value: 'earlyCareer', label: 'Early Career' },
+]
+
 export default function JobSearch({
   searchQuery,
-  selectedTags,
-  allTags,
+  selectedRoleLevel,
+  selectedLocation,
+  locationOptions,
   onSearchChange,
-  onTagToggle,
+  onRoleLevelChange,
+  onLocationChange,
   onClearFilters
 }: JobSearchProps) {
+  const hasFilterSelection = selectedRoleLevel !== '' || selectedLocation !== ''
+
   return (
     <div className="bg-background rounded-xl shadow-lg border border-border p-6">
       <div className="space-y-4">
@@ -36,34 +50,54 @@ export default function JobSearch({
           />
         </div>
 
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-sm font-medium text-muted-foreground py-2">
-            Filter by tags:
-          </span>
-          {allTags.map((tag) => (
-            <button
-              key={tag}
-              onClick={() => onTagToggle(tag)}
-              className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                selectedTags.includes(tag)
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
+              Position Level
+            </label>
+            <select
+              value={selectedRoleLevel}
+              onChange={(e) => onRoleLevelChange(e.target.value as RoleLevel | '')}
+              className="w-full px-3 py-3 bg-muted border border-border text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             >
-              {tag}
-            </button>
-          ))}
-          {selectedTags.length > 0 && (
-            <button
-              onClick={onClearFilters}
-              className="flex items-center gap-1 px-3 py-1 text-sm bg-error-background/20 text-error border border-error/50 rounded-full hover:bg-error-background/30 hover:border-error transition-colors"
+              <option value="">All levels</option>
+              {roleLevelOptions.map((roleLevelOption) => (
+                <option key={roleLevelOption.value} value={roleLevelOption.value}>
+                  {roleLevelOption.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
+              Location
+            </label>
+            <select
+              value={selectedLocation}
+              onChange={(e) => onLocationChange(e.target.value)}
+              className="w-full px-3 py-3 bg-muted border border-border text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent"
             >
-              <X size={14} />
-              Clear filters
-            </button>
-          )}
+              <option value="">All locations</option>
+              {locationOptions.map((locationOption) => (
+                <option key={locationOption} value={locationOption}>
+                  {locationOption}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+
+        {hasFilterSelection && (
+          <button
+            onClick={onClearFilters}
+            className="flex items-center gap-1 px-3 py-1 text-sm bg-error-background/20 text-error border border-error/50 rounded-full hover:bg-error-background/30 hover:border-error transition-colors"
+          >
+            <X size={14} />
+            Clear filters
+          </button>
+        )}
       </div>
     </div>
   )
-} 
+}

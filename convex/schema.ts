@@ -1,6 +1,12 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+const roleLevelValidator = v.union(
+  v.literal("intern"),
+  v.literal("graduate"),
+  v.literal("earlyCareer"),
+);
+
 export default defineSchema({
   profiles: defineTable({
     userId: v.string(),
@@ -17,6 +23,7 @@ export default defineSchema({
     company: v.string(),
     location: v.optional(v.string()),
     url: v.optional(v.string()),
+    roleLevel: v.optional(roleLevelValidator),
     status: v.union(
       v.literal("pending"),
       v.literal("approved"),
@@ -24,7 +31,15 @@ export default defineSchema({
       v.literal("outdated"),
     ),
     tags: v.optional(v.array(v.string())),
-  }),
+  })
+    .index("by_status", ["status"])
+    .index("by_status_roleLevel", ["status", "roleLevel"])
+    .index("by_status_location", ["status", "location"])
+    .index("by_status_roleLevel_location", [
+      "status",
+      "roleLevel",
+      "location",
+    ]),
 
   tags: defineTable({
     name: v.string(),
@@ -33,6 +48,17 @@ export default defineSchema({
   trackedApplications: defineTable({
     userId: v.string(),
     jobId: v.id("jobs"),
+    jobSnapshot: v.optional(
+      v.object({
+        title: v.string(),
+        company: v.string(),
+        location: v.string(),
+        url: v.string(),
+        createdAt: v.number(),
+        tags: v.array(v.string()),
+        roleLevel: v.optional(roleLevelValidator),
+      }),
+    ),
     status: v.union(
       v.literal("saved"),
       v.literal("applied"),

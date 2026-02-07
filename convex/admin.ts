@@ -55,7 +55,7 @@ export const getPendingJobs = query({
 
     const jobs = await ctx.db
       .query("jobs")
-      .filter((q) => q.eq(q.field("status"), "pending"))
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
       .order("desc")
       .collect();
 
@@ -79,7 +79,7 @@ export const getPendingJobsCount = query({
 
     const jobs = await ctx.db
       .query("jobs")
-      .filter((q) => q.eq(q.field("status"), "pending"))
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
       .collect();
 
     return jobs.length;
@@ -111,7 +111,7 @@ export const getApprovedJobs = query({
 
     const jobs = await ctx.db
       .query("jobs")
-      .filter((q) => q.eq(q.field("status"), "approved"))
+      .withIndex("by_status", (q) => q.eq("status", "approved"))
       .order("desc")
       .collect();
 
@@ -132,16 +132,6 @@ export const deleteJob = mutation({
   args: { jobId: v.id("jobs") },
   handler: async (ctx, args) => {
     await requireModOrAdmin(ctx);
-
-    // Delete all trackedApplications referencing this job
-    const bookmarks = await ctx.db
-      .query("trackedApplications")
-      .filter((q) => q.eq(q.field("jobId"), args.jobId))
-      .collect();
-
-    for (const bookmark of bookmarks) {
-      await ctx.db.delete(bookmark._id);
-    }
 
     // Delete the job
     await ctx.db.delete(args.jobId);

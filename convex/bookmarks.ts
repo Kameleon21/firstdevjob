@@ -1,5 +1,6 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { buildJobSnapshot } from "./jobHelpers";
 
 const applicationStatus = v.union(
   v.literal("saved"),
@@ -40,10 +41,35 @@ export const toggleBookmark = mutation({
     await ctx.db.insert("trackedApplications", {
       userId: identity.subject,
       jobId: args.jobId,
+      jobSnapshot: buildJobSnapshot(job),
       status: "saved",
     });
 
     return { bookmarked: true };
+  },
+});
+
+export const removeTrackedApplication = mutation({
+  args: {
+    bookmarkId: v.id("trackedApplications"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const bookmark = await ctx.db.get(args.bookmarkId);
+    if (!bookmark) {
+      throw new Error("Bookmark not found");
+    }
+
+    if (bookmark.userId !== identity.subject) {
+      throw new Error("Unauthorized");
+    }
+
+    await ctx.db.delete(bookmark._id);
+    return { success: true };
   },
 });
 
@@ -123,7 +149,29 @@ export const getUserBookmarks = query({
     const results = await Promise.all(
       bookmarks.map(async (bookmark) => {
         const job = await ctx.db.get(bookmark.jobId);
-        if (!job) {
+
+        if (job) {
+          const isClosed = job.status === "outdated";
+          return {
+            id: bookmark._id,
+            status: bookmark.status,
+            notes: bookmark.notes ?? null,
+            job: {
+              id: job._id,
+              title: job.title,
+              company: job.company,
+              location: job.location ?? "",
+              url: job.url ?? "",
+              createdAt: job._creationTime,
+              tags: job.tags ?? [],
+              roleLevel: job.roleLevel,
+              availability: isClosed ? "closed" : "active",
+              closureReason: isClosed ? "outdated" : null,
+            },
+          };
+        }
+
+        if (!bookmark.jobSnapshot) {
           return null;
         }
 
@@ -132,18 +180,47 @@ export const getUserBookmarks = query({
           status: bookmark.status,
           notes: bookmark.notes ?? null,
           job: {
-            id: job._id,
-            title: job.title,
-            company: job.company,
-            location: job.location ?? "",
-            url: job.url ?? "",
-            createdAt: job._creationTime,
-            tags: job.tags ?? [],
+            id: bookmark.jobId,
+            title: bookmark.jobSnapshot.title,
+            company: bookmark.jobSnapshot.company,
+            location: bookmark.jobSnapshot.location,
+            url: bookmark.jobSnapshot.url,
+            createdAt: bookmark.jobSnapshot.createdAt,
+            tags: bookmark.jobSnapshot.tags,
+            roleLevel: bookmark.jobSnapshot.roleLevel,
+            availability: "closed",
+            closureReason: "removed",
           },
         };
       }),
     );
 
     return results.filter(Boolean);
+  },
+});
+
+export const backfillTrackedApplicationSnapshots = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const trackedApplications = await ctx.db.query("trackedApplications").collect();
+    let updatedCount = 0;
+
+    for (const trackedApplication of trackedApplications) {
+      if (trackedApplication.jobSnapshot) {
+        continue;
+      }
+
+      const job = await ctx.db.get(trackedApplication.jobId);
+      if (!job) {
+        continue;
+      }
+
+      await ctx.db.patch(trackedApplication._id, {
+        jobSnapshot: buildJobSnapshot(job),
+      });
+      updatedCount++;
+    }
+
+    return { updatedCount };
   },
 });

@@ -73,10 +73,16 @@ export const deleteAccount = mutation({
       trackedApplications.map((record) => ctx.db.delete(record._id)),
     );
 
+    let deletedProfile = false;
     if (profile) {
       await ctx.db.delete(profile._id);
+      deletedProfile = true;
     }
 
-    return { success: true };
+    return {
+      success: true,
+      deletedTrackedApplicationsCount: trackedApplications.length,
+      deletedProfile,
+    };
   },
 });

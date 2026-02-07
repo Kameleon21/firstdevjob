@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useMutation } from 'convex/react'
 import type { Id } from '../../convex/_generated/dataModel'
 import { api } from '../../convex/_generated/api'
-import { ChevronDown, ExternalLink, Edit3, Save, X } from 'lucide-react'
+import { ChevronDown, ExternalLink, Edit3, Save, X, Trash2 } from 'lucide-react'
 
 interface Job {
   id: Id<'jobs'>
@@ -14,6 +14,8 @@ interface Job {
   url: string
   createdAt: number
   tags: string[]
+  availability: 'active' | 'closed'
+  closureReason: 'outdated' | 'removed' | null
 }
 
 type ApplicationStatus =
@@ -46,13 +48,16 @@ const statusOptions: Array<{ value: ApplicationStatus; label: string; color: str
 
 export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isRemoving, setIsRemoving] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [notes, setNotes] = useState(bookmark.notes || '')
   const [currentStatus, setCurrentStatus] = useState<ApplicationStatus>(bookmark.status)
   const updateBookmarkStatus = useMutation(api.bookmarks.updateBookmarkStatus)
+  const removeTrackedApplication = useMutation(api.bookmarks.removeTrackedApplication)
 
   const currentStatusOption = statusOptions.find(option => option.value === currentStatus)
+  const isClosed = bookmark.job.availability === 'closed'
 
   const handleStatusUpdate = async (newStatus: ApplicationStatus) => {
     setIsUpdating(true)
@@ -93,13 +98,42 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
     setIsEditingNotes(false)
   }
 
+  const handleRemoveTrackedApplication = async () => {
+    setIsRemoving(true)
+    try {
+      await removeTrackedApplication({ bookmarkId: bookmark.id })
+    } catch (error) {
+      console.error('Error removing tracked application:', error)
+      alert('Failed to remove tracked application. Please try again.')
+    } finally {
+      setIsRemoving(false)
+    }
+  }
+
+  const closureReasonText =
+    bookmark.job.closureReason === 'outdated'
+      ? 'This posting has closed and is no longer accepting applications.'
+      : 'The original posting was removed, but you can keep tracking your progress.'
+
   return (
     <div className="bg-background border border-border rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-200">
       {/* Header with title and status */}
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-lg font-semibold text-foreground pr-4 flex-1">
-          {bookmark.job.title}
-        </h3>
+        <div className="pr-4 flex-1">
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            {bookmark.job.title}
+          </h3>
+          {isClosed && (
+            <div className="inline-flex flex-col gap-1">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-warning-background text-warning border border-warning">
+                Job closed
+              </span>
+              <p className="text-xs text-muted-foreground">
+                {closureReasonText}
+              </p>
+            </div>
+          )}
+        </div>
         <div className="relative">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
@@ -231,16 +265,32 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
 
       {/* Action Button */}
       <div className="flex justify-between items-center pt-2">
-        <a
-          href={bookmark.job.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-accent hover:opacity-80 transition-colors text-sm"
+        {isClosed ? (
+          <span className="inline-flex items-center gap-2 text-muted-foreground text-sm px-3 py-2 border border-border rounded-lg bg-muted/50 cursor-not-allowed">
+            <ExternalLink size={16} />
+            Posting no longer available
+          </span>
+        ) : (
+          <a
+            href={bookmark.job.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-accent hover:opacity-80 transition-colors text-sm"
+          >
+            <ExternalLink size={16} />
+            View Job Posting
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={handleRemoveTrackedApplication}
+          disabled={isRemoving}
+          className="inline-flex items-center gap-2 px-3 py-2 text-sm text-error border border-error/40 rounded-lg hover:bg-error-background/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <ExternalLink size={16} />
-          View Job Posting
-        </a>
+          <Trash2 size={14} />
+          {isRemoving ? 'Removing...' : 'Remove from tracker'}
+        </button>
       </div>
     </div>
   )
-} 
+}

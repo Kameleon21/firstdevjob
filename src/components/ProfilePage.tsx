@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../convex/_generated/api";
 import Toast from "./Toast";
+import SiteFooter from "./SiteFooter";
 
 interface UserProfile {
   id: string;
@@ -47,6 +48,7 @@ const ProfilePage: React.FC = () => {
     type: "success" | "error";
   } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const profileResult = useQuery(api.profiles.getUserProfile);
   const updateUserName = useMutation(api.profiles.updateUserName);
   const deleteAccount = useMutation(api.profiles.deleteAccount);
@@ -142,26 +144,44 @@ const ProfilePage: React.FC = () => {
       return;
     }
 
+    if (isDeletingAccount) {
+      return;
+    }
+
+    setIsDeletingAccount(true);
+
     try {
-      await deleteAccount();
+      const result = await deleteAccount();
+      if (!result?.success) {
+        throw new Error("Failed to delete account data");
+      }
     } catch (err) {
       setToast({
         message:
           err instanceof Error ? err.message : "Failed to delete account data",
         type: "error",
       });
+      setIsDeletingAccount(false);
       return;
     }
 
     try {
       await user.delete();
-      router.push("/?message=Account successfully deleted");
+      sessionStorage.setItem(
+        "pendingToast",
+        JSON.stringify({
+          message: "Account successfully deleted",
+          type: "success",
+        }),
+      );
+      router.replace("/");
     } catch (err) {
       setToast({
         message:
           err instanceof Error ? err.message : "Failed to delete account",
         type: "error",
       });
+      setIsDeletingAccount(false);
     }
   };
 
@@ -419,7 +439,7 @@ const ProfilePage: React.FC = () => {
         </h3>
         <p className="text-sm text-muted-foreground mb-4">
           This action is irreversible. All your data, including tracked
-          applications and jobs, will be permanently deleted.
+          applications and profile information, will be permanently deleted.
         </p>
         <button
           onClick={() => setShowDeleteConfirm(true)}
@@ -445,15 +465,17 @@ const ProfilePage: React.FC = () => {
         <div className="flex justify-end space-x-4">
           <button
             onClick={() => setShowDeleteConfirm(false)}
+            disabled={isDeletingAccount}
             className="px-6 py-2 border border-border text-foreground rounded-lg hover:bg-muted transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleDeleteAccount}
+            disabled={isDeletingAccount}
             className="px-6 py-2 bg-error text-error-foreground rounded-lg hover:bg-error/90 transition-colors"
           >
-            Yes, delete my account
+            {isDeletingAccount ? "Deleting..." : "Yes, delete my account"}
           </button>
         </div>
       </div>
@@ -503,6 +525,7 @@ const ProfilePage: React.FC = () => {
 
         {activeTab === "profile" ? profileTabContent : securityTabContent}
       </div>
+      <SiteFooter />
 
       <Toast
         message={toast?.message || ""}

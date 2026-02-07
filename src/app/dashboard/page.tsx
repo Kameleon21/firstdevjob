@@ -8,9 +8,11 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import Header from "@/components/Header";
 import DashboardJobCard from "@/components/DashboardJobCard";
+import DashboardJobCardSkeleton from "@/components/DashboardJobCardSkeleton";
 import AdminSection from "@/components/AdminSection";
 import PostJobModal from "@/components/PostJobModal";
 import Toast from "@/components/Toast";
+import SiteFooter from "@/components/SiteFooter";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -48,13 +50,13 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-background">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded w-64 mb-4"></div>
-            <div className="h-4 bg-muted rounded w-96 mb-8"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="h-64 bg-muted rounded-xl"></div>
-              <div className="h-64 bg-muted rounded-xl"></div>
-            </div>
+          <div className="mb-8 animate-pulse">
+            <div className="h-8 bg-muted rounded w-64 mb-4" />
+            <div className="h-4 bg-muted rounded w-96 max-w-full" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <DashboardJobCardSkeleton />
+            <DashboardJobCardSkeleton />
           </div>
         </div>
       </div>
@@ -141,6 +143,7 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+      <SiteFooter />
 
       {/* Post Job Modal */}
       <PostJobModal
