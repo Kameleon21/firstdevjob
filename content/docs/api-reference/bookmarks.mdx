@@ -19,14 +19,14 @@ const bookmarks = useQuery(api.bookmarks.getUserBookmarks);
 
 **Authentication:** Required
 
-**Returns:** Array of bookmark objects with populated job data.
+**Returns:** Array of tracked applications with populated job data and availability metadata.
 
-### `isBookmarked`
+### `getBookmarkStatus`
 
 Check if a job is bookmarked by the current user.
 
 ```typescript
-const isBookmarked = useQuery(api.bookmarks.isBookmarked, { jobId });
+const status = useQuery(api.bookmarks.getBookmarkStatus, { jobId });
 ```
 
 **Authentication:** Required
@@ -34,16 +34,16 @@ const isBookmarked = useQuery(api.bookmarks.isBookmarked, { jobId });
 **Parameters:**
 - `jobId` - ID of the job to check
 
-**Returns:** Boolean indicating bookmark status.
+**Returns:** Object with `bookmarked` boolean.
 
 ## Mutations
 
-### `toggle`
+### `toggleBookmark`
 
 Add or remove a bookmark.
 
 ```typescript
-const toggleBookmark = useMutation(api.bookmarks.toggle);
+const toggleBookmark = useMutation(api.bookmarks.toggleBookmark);
 
 await toggleBookmark({ jobId });
 ```
@@ -55,28 +55,32 @@ await toggleBookmark({ jobId });
 
 **Returns:** Object with `bookmarked` boolean.
 
-### `remove`
+### `removeTrackedApplication`
 
-Remove a bookmark (alias for toggle when bookmarked).
+Remove a tracked application from the dashboard.
 
 ```typescript
-const removeBookmark = useMutation(api.bookmarks.remove);
+const removeTrackedApplication = useMutation(
+  api.bookmarks.removeTrackedApplication
+);
 
-await removeBookmark({ jobId });
+await removeTrackedApplication({ bookmarkId });
 ```
 
 **Authentication:** Required
+**Parameters:**
+- `bookmarkId` - Tracked application ID
 
 ## Usage Example
 
 ```tsx
 function BookmarkButton({ jobId }) {
-  const isBookmarked = useQuery(api.bookmarks.isBookmarked, { jobId });
-  const toggle = useMutation(api.bookmarks.toggle);
+  const bookmarkStatus = useQuery(api.bookmarks.getBookmarkStatus, { jobId });
+  const toggleBookmark = useMutation(api.bookmarks.toggleBookmark);
 
   return (
-    <button onClick={() => toggle({ jobId })}>
-      {isBookmarked ? "Bookmarked" : "Bookmark"}
+    <button onClick={() => toggleBookmark({ jobId })}>
+      {bookmarkStatus?.bookmarked ? "Bookmarked" : "Bookmark"}
     </button>
   );
 }

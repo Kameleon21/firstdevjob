@@ -55,7 +55,7 @@ bunx convex run seed:seedTags
 
 ## Features
 
-- Job search with tag filtering
+- Job search with role level and location filtering
 - Application tracking dashboard
 - Job posting with admin approval
 - Role-based access (user, moderator, admin)

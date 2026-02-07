@@ -9,73 +9,73 @@ Functions for moderating jobs and managing the platform.
 
 ## Queries
 
-### `listPending`
+### `getPendingJobs`
 
 Get all jobs pending review.
 
 ```typescript
-const pending = useQuery(api.admin.listPending);
+const pending = useQuery(api.admin.getPendingJobs);
 ```
 
 **Authentication:** Admin or Moderator role required
 
 **Returns:** Array of pending job submissions.
 
-### `listAll`
+### `getApprovedJobs`
 
 Get all jobs with any status.
 
 ```typescript
-const allJobs = useQuery(api.admin.listAll);
+const approvedJobs = useQuery(api.admin.getApprovedJobs);
 ```
 
 **Authentication:** Admin role required
 
-**Returns:** Array of all jobs.
+**Returns:** Array of approved jobs.
 
 ## Mutations
 
-### `approve`
+### `updateJobStatus`
 
 Approve a pending job submission.
 
 ```typescript
-const approve = useMutation(api.admin.approve);
+const updateJobStatus = useMutation(api.admin.updateJobStatus);
 
-await approve({ jobId });
+await updateJobStatus({ jobId, status: "approved" });
 ```
 
 **Authentication:** Admin or Moderator role required
 
 **Parameters:**
-- `jobId` - ID of job to approve
+- `jobId` - ID of job to update
+- `status` - `"approved"` or `"rejected"`
 
-**Returns:** Updated job object.
+**Returns:** Confirmation object.
 
-### `reject`
+### `markJobOutdated`
 
 Reject a pending job submission.
 
 ```typescript
-const reject = useMutation(api.admin.reject);
+const markJobOutdated = useMutation(api.admin.markJobOutdated);
 
-await reject({ jobId, reason: "Not entry-level position" });
+await markJobOutdated({ jobId });
 ```
 
 **Authentication:** Admin or Moderator role required
 
 **Parameters:**
 - `jobId` - ID of job to reject
-- `reason` - Optional rejection reason
 
-**Returns:** Updated job object.
+**Returns:** Confirmation object.
 
 ### `delete`
 
 Permanently delete a job.
 
 ```typescript
-const deleteJob = useMutation(api.admin.delete);
+const deleteJob = useMutation(api.admin.deleteJob);
 
 await deleteJob({ jobId });
 ```
@@ -87,9 +87,11 @@ await deleteJob({ jobId });
 
 **Returns:** Confirmation object.
 
+Deleted jobs are removed from listings; tracked applications remain available in user dashboards as closed entries.
+
 ## Role Checking
 
-Admin functions validate user roles from Clerk metadata:
+Admin functions validate roles from the `profiles` table:
 
 ```typescript
 const identity = await ctx.auth.getUserIdentity();

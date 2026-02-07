@@ -9,45 +9,50 @@ Functions for managing job listings.
 
 ## Queries
 
-### `listApproved`
+### `listApprovedJobs`
 
 Get all approved job listings.
 
 ```typescript
-const jobs = useQuery(api.jobs.listApproved);
+const jobs = useQuery(api.jobs.listApprovedJobs, {
+  searchTerm: "frontend",
+  roleLevel: "intern",
+  location: "Remote",
+});
 ```
 
 **Returns:** Array of approved jobs, sorted by creation date (newest first).
 
-### `getById`
+**Parameters:**
+- `searchTerm` - Optional text search over title/company/location
+- `roleLevel` - Optional role level (`intern`, `graduate`, `earlyCareer`)
+- `location` - Optional exact location filter
 
-Get a single job by ID.
+### `getApprovedJobFilterOptions`
+
+Get available location filter values from approved jobs.
 
 ```typescript
-const job = useQuery(api.jobs.getById, { id: jobId });
+const options = useQuery(api.jobs.getApprovedJobFilterOptions);
 ```
 
-**Parameters:**
-- `id` - Job ID
-
-**Returns:** Job object or null if not found.
+**Returns:** `{ locations: string[] }`
 
 ## Mutations
 
-### `submit`
+### `postJob`
 
 Submit a new job for review.
 
 ```typescript
-const submitJob = useMutation(api.jobs.submit);
+const postJob = useMutation(api.jobs.postJob);
 
-await submitJob({
+await postJob({
   title: "Junior Developer",
   company: "Acme Inc",
+  roleLevel: "earlyCareer",
   location: "Remote",
-  jobType: "full-time",
-  description: "...",
-  applyUrl: "https://...",
+  url: "https://...",
   tags: ["React", "TypeScript"],
 });
 ```
@@ -59,13 +64,12 @@ await submitJob({
 |-------|------|----------|
 | title | string | Yes |
 | company | string | Yes |
+| roleLevel | `"intern" \| "graduate" \| "earlyCareer"` | Yes |
 | location | string | Yes |
-| jobType | string | Yes |
-| description | string | Yes |
-| applyUrl | string | Yes |
+| url | string | Yes |
 | tags | string[] | No |
 
-**Returns:** ID of created job.
+**Returns:** Object with `success`, `jobId`, and `message`.
 
 ## Internal Functions
 
@@ -76,3 +80,7 @@ Cron job that cleans up old listings:
 - Pending/rejected jobs older than 2 weeks: deleted
 - Approved jobs older than 2 weeks: marked as "outdated"
 - Outdated jobs older than 30 days: deleted
+
+### `backfillJobRoleLevelsFromTitle`
+
+Backfills missing `roleLevel` values from job title keywords.
