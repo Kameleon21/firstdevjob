@@ -188,23 +188,28 @@ export const postJob = mutation({
     const title = args.title.trim();
     const company = args.company.trim();
     const location = args.location.trim();
-    const url = args.url.trim();
+    const rawUrl = args.url.trim();
 
-    if (!title || !company || !location || !url) {
+    if (!title || !company || !location || !rawUrl) {
       throw new Error("All fields are required");
     }
 
+    let parsedUrl: URL;
     try {
-      new URL(url);
+      parsedUrl = new URL(rawUrl);
     } catch {
       throw new Error("Please enter a valid URL");
+    }
+
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+      throw new Error("URL must start with http:// or https://");
     }
 
     const jobId = await ctx.db.insert("jobs", {
       title,
       company,
       location,
-      url,
+      url: parsedUrl.toString(),
       roleLevel: args.roleLevel,
       status: "pending",
       tags: args.tags?.length ? args.tags : undefined,

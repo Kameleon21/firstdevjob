@@ -2,6 +2,8 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import SiteFooter from "@/components/SiteFooter";
 
+const feedbackBoardUrl = process.env.NEXT_PUBLIC_FEEDBACK_BOARD_URL?.trim();
+
 export const metadata = {
   title: "Privacy Policy | FirstDevJob",
   description: "How FirstDevJob handles your data.",
@@ -63,6 +65,21 @@ export default function PrivacyPage() {
             <p className="text-muted-foreground">
               FirstDevJob uses Clerk for authentication and Convex for backend
               data storage/sync.
+              {feedbackBoardUrl && (
+                <>
+                  {" "}
+                  We also use Fider for the public feedback board at{" "}
+                  <a
+                    href={feedbackBoardUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent hover:opacity-80"
+                  >
+                    {feedbackBoardUrl}
+                  </a>
+                  .
+                </>
+              )}
             </p>
           </section>
 
