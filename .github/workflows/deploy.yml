@@ -52,7 +52,8 @@ jobs:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
     needs: test-before-deploy
-    if: (github.ref == 'refs/heads/Master' || github.event_name == 'workflow_dispatch') && secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != ''
+    # Toggle with repository variable VERCEL_CONFIGURED=true once Vercel secrets are set.
+    if: (github.ref == 'refs/heads/Master' || github.event_name == 'workflow_dispatch') && vars.VERCEL_CONFIGURED == 'true'
     
     steps:
       - name: Checkout code
