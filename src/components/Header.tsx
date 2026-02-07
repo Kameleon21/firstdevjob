@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -48,11 +49,15 @@ const Header: React.FC<HeaderProps> = ({ onPostJobClick }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <Link
-              href="/"
-              className="text-2xl font-bold text-accent hover:text-secondary-foreground transition-colors"
-            >
-              FirstDevJob
+            <Link href="/" className="flex items-center">
+              <Image
+                src={theme === "dark" ? "/logo-dark.png" : "/logo-light.png"}
+                alt="FirstDevJob"
+                width={150}
+                height={75}
+                className="h-14 w-auto"
+                priority
+              />
             </Link>
           </div>
 
