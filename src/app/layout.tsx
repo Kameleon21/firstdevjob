@@ -45,6 +45,10 @@ const clerkAppearance = {
 export const metadata: Metadata = {
   title: "FirstDevJob",
   description: "Find your first tech job",
+  icons: {
+    icon: "/apple-touch-icon.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -58,13 +62,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning={true}>
       <head>
-        <title>Find Your First Dev Job</title>
-        <meta
-          name="description"
-          content="Discover amazing opportunities to start your career in tech"
-        />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

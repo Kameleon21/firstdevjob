@@ -25,6 +25,7 @@ jest.mock('@/components/Header', () => ({ onPostJobClick }: { onPostJobClick: ()
 jest.mock('@/components/HeroSection', () => () => <div data-testid="hero-section" />)
 jest.mock('@/components/JobSearchWrapper', () => () => <div data-testid="job-search-wrapper" />)
 jest.mock('@/components/PostJobModal', () => () => <div data-testid="post-job-modal" />)
+jest.mock('@/components/SiteFooter', () => () => <footer data-testid="site-footer" />)
 jest.mock('@/components/Toast', () => ({ message, type, isVisible }: { message: string; type: string; isVisible: boolean }) =>
   isVisible ? <div data-testid="toast">{`${type}:${message}`}</div> : null
 )
