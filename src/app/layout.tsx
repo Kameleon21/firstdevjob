@@ -43,7 +43,7 @@ const clerkAppearance = {
 };
 
 export const metadata: Metadata = {
-  title: "FirstDevJob",
+  title: "FirstDevJob - Find Your First Tech Job",
   description: "Find your first tech job",
   icons: {
     icon: "/apple-touch-icon.png",
