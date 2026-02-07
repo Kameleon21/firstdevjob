@@ -30,6 +30,8 @@ jest.mock("@clerk/nextjs", () => ({
   useUser: jest.fn(),
 }));
 
+jest.mock("@/components/SiteFooter", () => () => <footer data-testid="site-footer" />);
+
 import ProfilePage from "@/components/ProfilePage";
 
 describe("ProfilePage account deletion", () => {
