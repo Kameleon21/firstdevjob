@@ -5,7 +5,7 @@ import '@testing-library/jest-dom'
 // Mock Convex
 const mockUseQuery = jest.fn()
 jest.mock('convex/react', () => ({
-  useQuery: () => mockUseQuery(),
+  useQuery: (...args: any[]) => mockUseQuery(...args),
 }))
 
 // Mock the Convex API
@@ -13,6 +13,7 @@ jest.mock('../../convex/_generated/api', () => ({
   api: {
     jobs: {
       listApprovedJobs: 'jobs:listApprovedJobs',
+      getApprovedJobFilterOptions: 'jobs:getApprovedJobFilterOptions',
     },
   },
 }))
@@ -21,15 +22,21 @@ jest.mock('../../convex/_generated/api', () => ({
 jest.mock('@/components/JobSearch', () => {
   return function MockJobSearch({
     searchQuery,
-    selectedTags,
+    selectedRoleLevel,
+    selectedLocation,
+    locationOptions,
     onSearchChange,
-    onTagToggle,
+    onRoleLevelChange,
+    onLocationChange,
     onClearFilters
   }: {
     searchQuery: string
-    selectedTags: string[]
+    selectedRoleLevel: string
+    selectedLocation: string
+    locationOptions: string[]
     onSearchChange: (query: string) => void
-    onTagToggle: (tag: string) => void
+    onRoleLevelChange: (roleLevel: string) => void
+    onLocationChange: (location: string) => void
     onClearFilters: () => void
   }) {
     return (
@@ -40,17 +47,28 @@ jest.mock('@/components/JobSearch', () => {
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search jobs..."
         />
-        <div data-testid="tags">
-          {selectedTags.map((tag: string) => (
-            <button
-              key={tag}
-              data-testid={`tag-${tag}`}
-              onClick={() => onTagToggle(tag)}
-            >
-              {tag}
-            </button>
+        <select
+          data-testid="role-filter"
+          value={selectedRoleLevel}
+          onChange={(e) => onRoleLevelChange(e.target.value)}
+        >
+          <option value="">All levels</option>
+          <option value="intern">Intern</option>
+          <option value="graduate">Graduate</option>
+          <option value="earlyCareer">Early Career</option>
+        </select>
+        <select
+          data-testid="location-filter"
+          value={selectedLocation}
+          onChange={(e) => onLocationChange(e.target.value)}
+        >
+          <option value="">All locations</option>
+          {locationOptions.map((location: string) => (
+            <option key={location} value={location}>
+              {location}
+            </option>
           ))}
-        </div>
+        </select>
         <button data-testid="clear-filters" onClick={onClearFilters}>
           Clear Filters
         </button>
@@ -60,9 +78,10 @@ jest.mock('@/components/JobSearch', () => {
 })
 
 jest.mock('@/components/JobCard', () => {
-  return function MockJobCard({ job, searchQuery }: {
+  return function MockJobCard({ job, searchQuery, isBookmarked }: {
     job: { _id: string; title: string; company: string; location: string }
     searchQuery: string
+    isBookmarked: boolean
   }) {
     return (
       <div data-testid={`job-card-${job._id}`}>
@@ -70,6 +89,7 @@ jest.mock('@/components/JobCard', () => {
         <p>{job.company}</p>
         <p>{job.location}</p>
         <div data-testid="search-query">{searchQuery}</div>
+        <div data-testid="bookmarked-state">{String(isBookmarked)}</div>
       </div>
     )
   }
@@ -87,7 +107,8 @@ describe('JobSearchWrapper', () => {
       location: 'Remote',
       url: 'https://techcorp.com/jobs/1',
       status: 'approved' as const,
-      tags: ['React', 'TypeScript']
+      tags: ['React', 'TypeScript'],
+      isBookmarked: false
     },
     {
       _id: '2',
@@ -97,19 +118,25 @@ describe('JobSearchWrapper', () => {
       location: 'New York, NY',
       url: 'https://datacorp.com/jobs/2',
       status: 'approved' as const,
-      tags: ['Node.js', 'Python']
+      tags: ['Node.js', 'Python'],
+      isBookmarked: true
     }
   ]
 
-  const mockTags = ['React', 'TypeScript', 'Node.js', 'Python']
+  const mockLocations = ['Remote', 'New York, NY']
 
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseQuery.mockReturnValue(mockJobs)
+    mockUseQuery.mockImplementation((queryRef: string) => {
+      if (queryRef === 'jobs:getApprovedJobFilterOptions') {
+        return { locations: mockLocations }
+      }
+      return mockJobs
+    })
   })
 
   it('renders initial jobs correctly', () => {
-    render(<JobSearchWrapper allTags={mockTags} />)
+    render(<JobSearchWrapper />)
 
     expect(screen.getByText('Latest Jobs')).toBeInTheDocument()
     expect(screen.getByText('2 jobs')).toBeInTheDocument()
@@ -118,7 +145,7 @@ describe('JobSearchWrapper', () => {
   })
 
   it('handles search input changes', async () => {
-    render(<JobSearchWrapper allTags={mockTags} />)
+    render(<JobSearchWrapper />)
 
     const searchInput = screen.getByTestId('search-input')
 
@@ -135,31 +162,43 @@ describe('JobSearchWrapper', () => {
   })
 
   it('handles clear filters correctly', async () => {
-    render(<JobSearchWrapper allTags={mockTags} />)
+    render(<JobSearchWrapper />)
 
     const searchInput = screen.getByTestId('search-input')
     fireEvent.change(searchInput, { target: { value: 'test' } })
+    fireEvent.change(screen.getByTestId('role-filter'), { target: { value: 'intern' } })
 
     const clearButton = screen.getByTestId('clear-filters')
     fireEvent.click(clearButton)
 
     await waitFor(() => {
       expect(searchInput).toHaveValue('')
+      expect(screen.getByTestId('role-filter')).toHaveValue('')
     })
   })
 
   it('displays empty state when no jobs found', () => {
-    mockUseQuery.mockReturnValue([])
+    mockUseQuery.mockImplementation((queryRef: string) => {
+      if (queryRef === 'jobs:getApprovedJobFilterOptions') {
+        return { locations: mockLocations }
+      }
+      return []
+    })
 
-    render(<JobSearchWrapper allTags={mockTags} />)
+    render(<JobSearchWrapper />)
 
     expect(screen.getByText('No jobs available')).toBeInTheDocument()
   })
 
   it('displays empty state with filters when no jobs match', async () => {
-    mockUseQuery.mockReturnValue([])
+    mockUseQuery.mockImplementation((queryRef: string) => {
+      if (queryRef === 'jobs:getApprovedJobFilterOptions') {
+        return { locations: mockLocations }
+      }
+      return []
+    })
 
-    render(<JobSearchWrapper allTags={mockTags} />)
+    render(<JobSearchWrapper />)
 
     const searchInput = screen.getByTestId('search-input')
     fireEvent.change(searchInput, { target: { value: 'nonexistent' } })
@@ -168,27 +207,39 @@ describe('JobSearchWrapper', () => {
       expect(screen.getByText('No jobs found')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('Try adjusting your search terms or selected tags to find more opportunities.')).toBeInTheDocument()
+    expect(screen.getByText('Try adjusting your search terms, role level, or location filters to find more opportunities.')).toBeInTheDocument()
   })
 
   it('shows loading state when jobs are undefined', () => {
-    mockUseQuery.mockReturnValue(undefined)
+    mockUseQuery.mockImplementation((queryRef: string) => {
+      if (queryRef === 'jobs:getApprovedJobFilterOptions') {
+        return { locations: mockLocations }
+      }
+      return undefined
+    })
 
-    render(<JobSearchWrapper allTags={mockTags} />)
+    render(<JobSearchWrapper />)
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByTestId('job-skeleton-grid')).toBeInTheDocument()
+    expect(screen.getAllByText('Loading...').length).toBeGreaterThan(0)
+    expect(screen.queryByText('No jobs available')).not.toBeInTheDocument()
   })
 
   it('maintains job count display', () => {
-    render(<JobSearchWrapper allTags={mockTags} />)
+    render(<JobSearchWrapper />)
 
     expect(screen.getByText('2 jobs')).toBeInTheDocument()
   })
 
   it('displays singular job count correctly', () => {
-    mockUseQuery.mockReturnValue([mockJobs[0]])
+    mockUseQuery.mockImplementation((queryRef: string) => {
+      if (queryRef === 'jobs:getApprovedJobFilterOptions') {
+        return { locations: mockLocations }
+      }
+      return [mockJobs[0]]
+    })
 
-    render(<JobSearchWrapper allTags={mockTags} />)
+    render(<JobSearchWrapper />)
 
     expect(screen.getByText('1 job')).toBeInTheDocument()
   })

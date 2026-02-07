@@ -12,10 +12,13 @@ interface PostJobModalProps {
   onSuccess: (message: string) => void
 }
 
+type RoleLevel = 'intern' | 'graduate' | 'earlyCareer'
+
 export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: PostJobModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     company: '',
+    roleLevel: '' as RoleLevel | '',
     location: '',
     url: '',
     selectedTags: [] as string[]
@@ -33,6 +36,7 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
     setFormData({
       title: '',
       company: '',
+      roleLevel: '',
       location: '',
       url: '',
       selectedTags: []
@@ -186,9 +190,14 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
     setError('')
 
     try {
+      if (!formData.roleLevel) {
+        throw new Error('Please select a position level')
+      }
+
       const result = await postJob({
         title: formData.title,
         company: formData.company,
+        roleLevel: formData.roleLevel,
         location: formData.location,
         url: formData.url,
         tags: formData.selectedTags,
@@ -281,6 +290,29 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
                   placeholder="e.g. Tech Solutions Ireland"
                   required
                 />
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-focus-within:opacity-100 transition-opacity duration-200 rounded-xl pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Position Level */}
+            <div className="group">
+              <label htmlFor="roleLevel" className="block text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-accent" />
+                Position Level *
+              </label>
+              <div className="relative">
+                <select
+                  id="roleLevel"
+                  value={formData.roleLevel}
+                  onChange={(e) => handleInputChange('roleLevel', e.target.value)}
+                  className="w-full px-4 py-4 bg-muted/50 border border-border/50 rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring focus:bg-muted transition-all duration-200 backdrop-blur-sm"
+                  required
+                >
+                  <option value="">Select position level</option>
+                  <option value="intern">Intern</option>
+                  <option value="graduate">Graduate</option>
+                  <option value="earlyCareer">Early Career</option>
+                </select>
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-focus-within:opacity-100 transition-opacity duration-200 rounded-xl pointer-events-none" />
               </div>
             </div>

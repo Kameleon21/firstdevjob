@@ -25,11 +25,17 @@ jest.mock('@/components/Header', () => ({ onPostJobClick }: { onPostJobClick: ()
 jest.mock('@/components/HeroSection', () => () => <div data-testid="hero-section" />)
 jest.mock('@/components/JobSearchWrapper', () => () => <div data-testid="job-search-wrapper" />)
 jest.mock('@/components/PostJobModal', () => () => <div data-testid="post-job-modal" />)
-jest.mock('@/components/Toast', () => () => <div data-testid="toast" />)
+jest.mock('@/components/Toast', () => ({ message, type, isVisible }: { message: string; type: string; isVisible: boolean }) =>
+  isVisible ? <div data-testid="toast">{`${type}:${message}`}</div> : null
+)
 
 import PageWrapper from '@/components/PageWrapper'
 
 describe('PageWrapper', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+
   it('renders the main page components', () => {
     render(<PageWrapper />)
     expect(screen.getByTestId('hero-section')).toBeInTheDocument()
@@ -55,5 +61,17 @@ describe('PageWrapper', () => {
     await waitFor(() => {
       expect(screen.getByTestId('post-job-modal')).toBeInTheDocument()
     })
+  })
+
+  it('shows one-time toast from pending sessionStorage payload and clears it', async () => {
+    sessionStorage.setItem(
+      'pendingToast',
+      JSON.stringify({ message: 'Account successfully deleted', type: 'success' }),
+    )
+
+    render(<PageWrapper />)
+
+    expect(await screen.findByText('success:Account successfully deleted')).toBeInTheDocument()
+    expect(sessionStorage.getItem('pendingToast')).toBeNull()
   })
 })

@@ -3,7 +3,9 @@ import withBundleAnalyzer from '@next/bundle-analyzer';
 import { createMDX } from 'fumadocs-mdx/next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  turbopack: {
+    root: process.cwd(),
+  },
 };
 
 const withMDX = createMDX();

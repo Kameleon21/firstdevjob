@@ -18,23 +18,10 @@ Stores all job listings.
 | `title` | string | Job title |
 | `company` | string | Company name |
 | `location` | string | Job location |
-| `jobType` | string | full-time, part-time, internship, contract |
-| `description` | string | Full job description |
-| `applyUrl` | string | Application link |
+| `url` | string | Application link |
+| `roleLevel` | string? | intern, graduate, earlyCareer |
 | `tags` | string[] | Technology tags |
 | `status` | string | pending, approved, rejected, outdated |
-| `submittedBy` | string? | User ID who submitted |
-| `createdAt` | number | Timestamp |
-
-### bookmarks
-
-Tracks user bookmarks.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `userId` | string | User ID |
-| `jobId` | Id\<"jobs"\> | Reference to job |
-| `createdAt` | number | When bookmarked |
 
 ### trackedApplications
 
@@ -44,9 +31,10 @@ Application tracking data.
 |-------|------|-------------|
 | `userId` | string | User ID |
 | `jobId` | Id\<"jobs"\> | Reference to job |
-| `status` | string | bookmarked, applied, interview, offer, rejected |
+| `jobSnapshot` | object? | Cached job data used when source job is removed |
+| `status` | string | saved, applied, interviewing, offer, rejected, accepted |
 | `notes` | string? | User notes |
-| `updatedAt` | number | Last update |
+| `_creationTime` | number | Created timestamp (Convex-managed) |
 
 ### profiles
 
@@ -64,5 +52,5 @@ User profile information.
 Key indexes for query performance:
 
 - `jobs.by_status` - Filter jobs by approval status
-- `bookmarks.by_user` - Get user's bookmarks
-- `trackedApplications.by_user_and_job` - Unique tracking per job
+- `trackedApplications.by_userId` - Get user's tracked applications
+- `trackedApplications.by_userId_jobId` - Unique tracking per user/job

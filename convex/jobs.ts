@@ -1,5 +1,12 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { inferRoleLevelFromTitle } from "./jobHelpers";
+
+const roleLevelValidator = v.union(
+  v.literal("intern"),
+  v.literal("graduate"),
+  v.literal("earlyCareer"),
+);
 
 export const deleteOldJobs = internalMutation({
   handler: async (ctx) => {
@@ -17,23 +24,13 @@ export const deleteOldJobs = internalMutation({
           q.lt(q.field("_creationTime"), twoWeeksAgo),
           q.or(
             q.eq(q.field("status"), "pending"),
-            q.eq(q.field("status"), "rejected")
-          )
-        )
+            q.eq(q.field("status"), "rejected"),
+          ),
+        ),
       )
       .collect();
 
     for (const job of oldNonApprovedJobs) {
-      // Delete related bookmarks first
-      const bookmarks = await ctx.db
-        .query("trackedApplications")
-        .filter((q) => q.eq(q.field("jobId"), job._id))
-        .collect();
-
-      for (const bookmark of bookmarks) {
-        await ctx.db.delete(bookmark._id);
-      }
-
       await ctx.db.delete(job._id);
       deletedCount++;
     }
@@ -44,8 +41,8 @@ export const deleteOldJobs = internalMutation({
       .filter((q) =>
         q.and(
           q.lt(q.field("_creationTime"), twoWeeksAgo),
-          q.eq(q.field("status"), "approved")
-        )
+          q.eq(q.field("status"), "approved"),
+        ),
       )
       .collect();
 
@@ -60,22 +57,12 @@ export const deleteOldJobs = internalMutation({
       .filter((q) =>
         q.and(
           q.lt(q.field("_creationTime"), thirtyDaysAgo),
-          q.eq(q.field("status"), "outdated")
-        )
+          q.eq(q.field("status"), "outdated"),
+        ),
       )
       .collect();
 
     for (const job of oldOutdatedJobs) {
-      // Delete related bookmarks first
-      const bookmarks = await ctx.db
-        .query("trackedApplications")
-        .filter((q) => q.eq(q.field("jobId"), job._id))
-        .collect();
-
-      for (const bookmark of bookmarks) {
-        await ctx.db.delete(bookmark._id);
-      }
-
       await ctx.db.delete(job._id);
       deletedCount++;
     }
@@ -87,14 +74,47 @@ export const deleteOldJobs = internalMutation({
 export const listApprovedJobs = query({
   args: {
     searchTerm: v.optional(v.string()),
-    selectedTags: v.optional(v.array(v.string())),
+    roleLevel: v.optional(roleLevelValidator),
+    location: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let jobs = await ctx.db
-      .query("jobs")
-      .filter((q) => q.eq(q.field("status"), "approved"))
-      .order("desc")
-      .collect();
+    const trimmedLocation = args.location?.trim();
+    let jobs;
+
+    if (args.roleLevel && trimmedLocation) {
+      jobs = await ctx.db
+        .query("jobs")
+        .withIndex("by_status_roleLevel_location", (q) =>
+          q
+            .eq("status", "approved")
+            .eq("roleLevel", args.roleLevel)
+            .eq("location", trimmedLocation),
+        )
+        .order("desc")
+        .collect();
+    } else if (args.roleLevel) {
+      jobs = await ctx.db
+        .query("jobs")
+        .withIndex("by_status_roleLevel", (q) =>
+          q.eq("status", "approved").eq("roleLevel", args.roleLevel),
+        )
+        .order("desc")
+        .collect();
+    } else if (trimmedLocation) {
+      jobs = await ctx.db
+        .query("jobs")
+        .withIndex("by_status_location", (q) =>
+          q.eq("status", "approved").eq("location", trimmedLocation),
+        )
+        .order("desc")
+        .collect();
+    } else {
+      jobs = await ctx.db
+        .query("jobs")
+        .withIndex("by_status", (q) => q.eq("status", "approved"))
+        .order("desc")
+        .collect();
+    }
 
     const trimmedSearch = args.searchTerm?.trim();
     if (trimmedSearch) {
@@ -107,13 +127,51 @@ export const listApprovedJobs = query({
       );
     }
 
-    if (args.selectedTags && args.selectedTags.length > 0) {
-      jobs = jobs.filter((job) =>
-        args.selectedTags!.some((tag) => job.tags?.includes(tag)),
+    const identity = await ctx.auth.getUserIdentity();
+    let bookmarkedJobIds = new Set();
+
+    if (identity) {
+      const trackedApplications = await ctx.db
+        .query("trackedApplications")
+        .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+        .collect();
+      bookmarkedJobIds = new Set(
+        trackedApplications.map((application) => application.jobId),
       );
     }
 
-    return jobs;
+    return jobs.map((job) => ({
+      _id: job._id,
+      _creationTime: job._creationTime,
+      title: job.title,
+      company: job.company,
+      location: job.location ?? "",
+      url: job.url ?? "",
+      status: job.status,
+      tags: job.tags ?? [],
+      roleLevel: job.roleLevel,
+      isBookmarked: bookmarkedJobIds.has(job._id),
+    }));
+  },
+});
+
+export const getApprovedJobFilterOptions = query({
+  args: {},
+  handler: async (ctx) => {
+    const approvedJobs = await ctx.db
+      .query("jobs")
+      .withIndex("by_status", (q) => q.eq("status", "approved"))
+      .collect();
+
+    const locations = Array.from(
+      new Set(
+        approvedJobs
+          .map((job) => job.location?.trim())
+          .filter((location): location is string => !!location),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+
+    return { locations };
   },
 });
 
@@ -123,6 +181,7 @@ export const postJob = mutation({
     company: v.string(),
     location: v.string(),
     url: v.string(),
+    roleLevel: roleLevelValidator,
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
@@ -146,6 +205,7 @@ export const postJob = mutation({
       company,
       location,
       url,
+      roleLevel: args.roleLevel,
       status: "pending",
       tags: args.tags?.length ? args.tags : undefined,
     });
@@ -169,5 +229,25 @@ export const postJob = mutation({
       message:
         "Thank you for your submission! Your job posting will be reviewed and added to the community within 24 hours if it's a good fit for our developers.",
     };
+  },
+});
+
+export const backfillJobRoleLevelsFromTitle = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const jobs = await ctx.db.query("jobs").collect();
+    let updatedCount = 0;
+
+    for (const job of jobs) {
+      if (job.roleLevel) {
+        continue;
+      }
+
+      const inferredRoleLevel = inferRoleLevelFromTitle(job.title);
+      await ctx.db.patch(job._id, { roleLevel: inferredRoleLevel });
+      updatedCount++;
+    }
+
+    return { updatedCount };
   },
 });

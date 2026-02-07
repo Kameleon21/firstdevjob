@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as bookmarks from "../bookmarks.js";
 import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
+import type * as jobHelpers from "../jobHelpers.js";
 import type * as jobs from "../jobs.js";
 import type * as profiles from "../profiles.js";
 import type * as seed from "../seed.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   bookmarks: typeof bookmarks;
   crons: typeof crons;
   dashboard: typeof dashboard;
+  jobHelpers: typeof jobHelpers;
   jobs: typeof jobs;
   profiles: typeof profiles;
   seed: typeof seed;

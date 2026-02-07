@@ -27,6 +27,9 @@ export const getDashboardData = query({
             url: string;
             createdAt: number;
             tags: string[];
+            roleLevel?: "intern" | "graduate" | "earlyCareer";
+            availability: "active" | "closed";
+            closureReason: "outdated" | "removed" | null;
           };
         }>,
         userRole: { isAdmin: false, isModerator: false },
@@ -83,30 +86,59 @@ export const getDashboardData = query({
         url: string;
         createdAt: number;
         tags: string[];
+        roleLevel?: "intern" | "graduate" | "earlyCareer";
+        availability: "active" | "closed";
+        closureReason: "outdated" | "removed" | null;
       };
-    }> = [];
+    }> = (
+      await Promise.all(
+        bookmarks.map(async (bookmark) => {
+          const job = await ctx.db.get(bookmark.jobId);
+          if (job) {
+            const isClosed = job.status === "outdated";
+            return {
+              id: bookmark._id,
+              status: bookmark.status,
+              notes: bookmark.notes ?? null,
+              job: {
+                id: job._id,
+                title: job.title,
+                company: job.company,
+                location: job.location ?? "",
+                url: job.url ?? "",
+                createdAt: job._creationTime,
+                tags: job.tags ?? [],
+                roleLevel: job.roleLevel,
+                availability: isClosed ? ("closed" as const) : ("active" as const),
+                closureReason: isClosed ? ("outdated" as const) : null,
+              },
+            };
+          }
 
-    for (const bookmark of bookmarks) {
-      const job = await ctx.db.get(bookmark.jobId);
-      if (!job) {
-        continue;
-      }
+          if (!bookmark.jobSnapshot) {
+            return null;
+          }
 
-      bookmarkResults.push({
-        id: bookmark._id,
-        status: bookmark.status,
-        notes: bookmark.notes ?? null,
-        job: {
-          id: job._id,
-          title: job.title,
-          company: job.company,
-          location: job.location ?? "",
-          url: job.url ?? "",
-          createdAt: job._creationTime,
-          tags: job.tags ?? [],
-        },
-      });
-    }
+          return {
+            id: bookmark._id,
+            status: bookmark.status,
+            notes: bookmark.notes ?? null,
+            job: {
+              id: bookmark.jobId,
+              title: bookmark.jobSnapshot.title,
+              company: bookmark.jobSnapshot.company,
+              location: bookmark.jobSnapshot.location,
+              url: bookmark.jobSnapshot.url,
+              createdAt: bookmark.jobSnapshot.createdAt,
+              tags: bookmark.jobSnapshot.tags,
+              roleLevel: bookmark.jobSnapshot.roleLevel,
+              availability: "closed" as const,
+              closureReason: "removed" as const,
+            },
+          };
+        }),
+      )
+    ).filter((bookmark): bookmark is NonNullable<typeof bookmark> => !!bookmark);
 
     let pendingJobs: Array<{
       id: Id<"jobs">;
@@ -122,7 +154,7 @@ export const getDashboardData = query({
     if (userRole.isModerator) {
       const jobs = await ctx.db
         .query("jobs")
-        .filter((q) => q.eq(q.field("status"), "pending"))
+        .withIndex("by_status", (q) => q.eq("status", "pending"))
         .order("desc")
         .collect();
 

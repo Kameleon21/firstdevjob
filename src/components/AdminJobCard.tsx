@@ -40,7 +40,7 @@ export default function AdminJobCard({ job, mode = 'pending' }: AdminJobCardProp
   }
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this job? This will also remove all user bookmarks for this job.')) {
+    if (!confirm('Are you sure you want to delete this job? Tracked applications will remain in user dashboards as closed entries.')) {
       return
     }
     setIsLoading(true)
@@ -190,7 +190,7 @@ export default function AdminJobCard({ job, mode = 'pending' }: AdminJobCardProp
       <p className="mt-3 text-xs text-muted-foreground/80 text-center">
         {mode === 'pending'
           ? 'Approved jobs will be published immediately. Rejected jobs will be permanently hidden.'
-          : 'Outdated jobs will be hidden from users. Deleted jobs are permanently removed.'}
+          : 'Outdated jobs will be hidden from users. Deleted jobs are removed from listings while user tracking remains available.'}
       </p>
     </div>
   )
