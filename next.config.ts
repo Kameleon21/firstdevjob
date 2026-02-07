@@ -2,7 +2,11 @@ import type { NextConfig } from "next";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import { createMDX } from "fumadocs-mdx/next";
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  turbopack: {
+    root: import.meta.dirname,
+  },
+};
 
 const withMDX = createMDX();
 
