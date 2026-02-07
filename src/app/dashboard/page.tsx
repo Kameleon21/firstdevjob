@@ -41,7 +41,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push("/auth/login?message=Please sign in to view your dashboard");
+      router.push("/auth/login?redirect_url=%2Fdashboard");
     }
   }, [authLoading, isAuthenticated, router]);
 

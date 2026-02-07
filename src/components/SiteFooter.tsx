@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Github } from "lucide-react";
 
 const GITHUB_URL = "https://github.com/Kameleon21/firstdevjob";
+const FEEDBACK_BOARD_URL = process.env.NEXT_PUBLIC_FEEDBACK_BOARD_URL?.trim();
 
 export default function SiteFooter() {
   return (
@@ -14,6 +15,23 @@ export default function SiteFooter() {
             FirstDevJob
           </p>
           <div className="flex items-center gap-5">
+            {FEEDBACK_BOARD_URL ? (
+              <a
+                href={FEEDBACK_BOARD_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Feedback
+              </a>
+            ) : (
+              <Link
+                href="/feedback"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Feedback
+              </Link>
+            )}
             <a
               href={GITHUB_URL}
               target="_blank"

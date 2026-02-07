@@ -6,7 +6,7 @@ export default async function Profile() {
   const { userId } = await auth()
 
   if (!userId) {
-    redirect('/auth/login')
+    redirect('/auth/login?redirect_url=%2Fprofile')
   }
 
   return <ProfilePage />

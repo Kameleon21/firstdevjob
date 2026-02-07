@@ -41,10 +41,14 @@ Create `.env.local`:
 # Convex
 CONVEX_DEPLOYMENT=dev:your-deployment
 NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
+CLERK_JWT_ISSUER_DOMAIN=https://your-issuer.clerk.accounts.dev
 
 # Clerk
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
 CLERK_SECRET_KEY=sk_test_xxx
+
+# Feedback board (optional until configured)
+NEXT_PUBLIC_FEEDBACK_BOARD_URL=https://your-board.fider.io
 ```
 
 ### Seed Initial Data
@@ -59,6 +63,18 @@ bunx convex run seed:seedTags
 - Application tracking dashboard
 - Job posting with admin approval
 - Role-based access (user, moderator, admin)
+
+## v1.0 Release Notes
+
+- Added launch hardening for auth redirects and deployment workflow behavior.
+- Added stricter job URL validation (`http`/`https` only) for safer outbound links.
+- Added a dedicated `/feedback` page and footer link for feature requests and bug reports.
+- Aligned deployment documentation and environment variable requirements.
+
+### Known post-launch follow-ups
+
+- Add anti-spam/rate limiting for public job submissions.
+- Increase automated test coverage for auth, posting, and moderation flows.
 
 ## Project Structure
 
