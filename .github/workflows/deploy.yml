@@ -47,11 +47,31 @@ jobs:
           NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL || 'https://dummy.convex.cloud' }}
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
 
+  # Deploy Convex functions to prod
+  deploy-convex:
+    name: Deploy Convex Functions
+    runs-on: ubuntu-latest
+    needs: test-before-deploy
+    if: (github.ref == 'refs/heads/Master' || github.event_name == 'workflow_dispatch') && vars.VERCEL_CONFIGURED == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: '1.3.6'
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Deploy Convex functions to prod
+        run: bunx convex deploy
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+
   # Deploy to Vercel (if using Vercel)
   deploy-vercel:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
-    needs: test-before-deploy
+    needs: [test-before-deploy, deploy-convex]
     # Toggle with repository variable VERCEL_CONFIGURED=true once Vercel secrets are set.
     if: (github.ref == 'refs/heads/Master' || github.event_name == 'workflow_dispatch') && vars.VERCEL_CONFIGURED == 'true'
     

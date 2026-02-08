@@ -15,7 +15,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
-    "postinstall": "fumadocs-mdx"
+    "postinstall": "fumadocs-mdx",
+    "sync:prod-to-dev": "bunx convex export --prod --path prod-snapshot.zip && bunx convex import --replace prod-snapshot.zip && rm prod-snapshot.zip"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",
