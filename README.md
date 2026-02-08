@@ -90,11 +90,26 @@ bunx convex run seed:seedTags
 ## Scripts
 
 ```bash
-bun run dev        # Development server
-bun run build      # Production build
-bun run lint       # Lint code
-bun run test       # Run tests
+bun run dev              # Development server
+bun run build            # Production build
+bun run lint             # Lint code
+bun run test             # Run tests
+bun run sync:prod-to-dev # Pull prod data into local dev
 ```
+
+## Deployment
+
+Pushing to `Master` triggers the CI/CD pipeline (`.github/workflows/deploy.yml`):
+
+1. **Pre-deployment tests** — lint, typecheck, build
+2. **Deploy Convex functions** — pushes backend code to prod (`CONVEX_DEPLOY_KEY` secret required)
+3. **Deploy to Vercel** — builds and deploys frontend with prod environment variables
+
+### Local Development vs Production
+
+- **Dev**: `bunx convex dev` connects to your dev deployment. `.env.local` has dev URLs.
+- **Prod**: Only updated via CI/CD on push to Master. Never run `bunx convex dev` against prod.
+- Run `bun run sync:prod-to-dev` to pull fresh prod data into your local dev environment.
 
 ## Documentation
 
