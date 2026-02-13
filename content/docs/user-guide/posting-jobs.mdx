@@ -30,7 +30,15 @@ All job submissions are reviewed before appearing on the site:
 
 - Jobs are reviewed by moderators
 - Approved jobs appear in the listings
-- You'll receive notification when your job is approved
+
+## Security Checks
+
+The form is validated server-side before a job is saved:
+
+- Required fields are normalized and validated
+- URLs must be public `http`/`https` links
+- URLs with local/private-network hosts are rejected
+- Rate limits apply to reduce submission abuse
 
 ## Guidelines
 

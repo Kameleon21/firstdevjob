@@ -9,11 +9,13 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as applicationIntegrity from "../applicationIntegrity.js";
 import type * as auth from "../auth.js";
 import type * as bookmarks from "../bookmarks.js";
 import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as jobHelpers from "../jobHelpers.js";
+import type * as jobSubmissionSecurity from "../jobSubmissionSecurity.js";
 import type * as jobs from "../jobs.js";
 import type * as profiles from "../profiles.js";
 import type * as seed from "../seed.js";
@@ -28,11 +30,13 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  applicationIntegrity: typeof applicationIntegrity;
   auth: typeof auth;
   bookmarks: typeof bookmarks;
   crons: typeof crons;
   dashboard: typeof dashboard;
   jobHelpers: typeof jobHelpers;
+  jobSubmissionSecurity: typeof jobSubmissionSecurity;
   jobs: typeof jobs;
   profiles: typeof profiles;
   seed: typeof seed;

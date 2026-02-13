@@ -1,12 +1,19 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { inferRoleLevelFromTitle } from "./jobHelpers";
+import { requireAuth } from "./auth";
+import { validateAndNormalizeJobSubmission } from "./jobSubmissionSecurity";
 
 const roleLevelValidator = v.union(
   v.literal("intern"),
   v.literal("graduate"),
   v.literal("earlyCareer"),
 );
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * ONE_HOUR_MS;
+const MAX_SUBMISSIONS_PER_HOUR = 6;
+const MAX_SUBMISSIONS_PER_DAY = 20;
 
 export const deleteOldJobs = internalMutation({
   handler: async (ctx) => {
@@ -185,38 +192,59 @@ export const postJob = mutation({
     tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    const title = args.title.trim();
-    const company = args.company.trim();
-    const location = args.location.trim();
-    const rawUrl = args.url.trim();
+    const identity = await requireAuth(ctx);
+    const normalizedSubmission = validateAndNormalizeJobSubmission({
+      title: args.title,
+      company: args.company,
+      location: args.location,
+      url: args.url,
+      tags: args.tags,
+    });
+    const { title, company, location, normalizedUrl, tags } =
+      normalizedSubmission;
 
-    if (!title || !company || !location || !rawUrl) {
-      throw new Error("All fields are required");
+    const now = Date.now();
+    const submitterUserId = identity.subject;
+
+    const submitterJobs = await ctx.db
+      .query("jobs")
+      .withIndex("by_submitterUserId", (q) =>
+        q.eq("submitterUserId", submitterUserId),
+      )
+      .collect();
+
+    const submissionsInHour = submitterJobs.filter(
+      (job) => job._creationTime >= now - ONE_HOUR_MS,
+    ).length;
+    const submissionsInDay = submitterJobs.filter(
+      (job) => job._creationTime >= now - ONE_DAY_MS,
+    ).length;
+
+    if (submissionsInHour >= MAX_SUBMISSIONS_PER_HOUR) {
+      throw new Error(
+        "Rate limit reached. Please wait before submitting another job.",
+      );
     }
 
-    let parsedUrl: URL;
-    try {
-      parsedUrl = new URL(rawUrl);
-    } catch {
-      throw new Error("Please enter a valid URL");
-    }
-
-    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-      throw new Error("URL must start with http:// or https://");
+    if (submissionsInDay >= MAX_SUBMISSIONS_PER_DAY) {
+      throw new Error(
+        "Daily submission limit reached. Please try again tomorrow.",
+      );
     }
 
     const jobId = await ctx.db.insert("jobs", {
       title,
       company,
       location,
-      url: parsedUrl.toString(),
+      url: normalizedUrl,
       roleLevel: args.roleLevel,
       status: "pending",
-      tags: args.tags?.length ? args.tags : undefined,
+      tags: tags.length ? tags : undefined,
+      submitterUserId,
     });
 
-    if (args.tags && args.tags.length > 0) {
-      for (const tagName of args.tags) {
+    if (tags.length > 0) {
+      for (const tagName of tags) {
         const existing = await ctx.db
           .query("tags")
           .withIndex("by_name", (q) => q.eq("name", tagName))

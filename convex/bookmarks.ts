@@ -1,6 +1,14 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { buildJobSnapshot } from "./jobHelpers";
+import {
+  appendStatusHistory,
+  canTransitionApplicationStatus,
+  isNotesLengthValid,
+  MAX_NOTES_LENGTH,
+  normalizeNotes,
+  type ApplicationStatus,
+} from "./applicationIntegrity";
 
 const applicationStatus = v.union(
   v.literal("saved"),
@@ -43,6 +51,12 @@ export const toggleBookmark = mutation({
       jobId: args.jobId,
       jobSnapshot: buildJobSnapshot(job),
       status: "saved",
+      statusHistory: [
+        {
+          toStatus: "saved",
+          changedAt: Date.now(),
+        },
+      ],
     });
 
     return { bookmarked: true };
@@ -94,12 +108,44 @@ export const updateBookmarkStatus = mutation({
       throw new Error("Unauthorized");
     }
 
-    const patch: { status: typeof args.status; notes?: string } = {
+    if (
+      bookmark.status !== args.status &&
+      !canTransitionApplicationStatus(bookmark.status, args.status)
+    ) {
+      throw new Error(
+        `Invalid status transition from ${bookmark.status} to ${args.status}.`,
+      );
+    }
+
+    const patch: {
+      status: typeof args.status;
+      notes?: string;
+      statusHistory?: Array<{
+        fromStatus?: ApplicationStatus;
+        toStatus: ApplicationStatus;
+        changedAt: number;
+      }>;
+    } = {
       status: args.status,
     };
 
     if (args.notes !== undefined) {
-      patch.notes = args.notes;
+      const normalized = normalizeNotes(args.notes);
+      if (!isNotesLengthValid(normalized)) {
+        throw new Error(
+          `Notes must be ${MAX_NOTES_LENGTH} characters or fewer.`,
+        );
+      }
+      patch.notes = normalized;
+    }
+
+    if (bookmark.status !== args.status) {
+      patch.statusHistory = appendStatusHistory({
+        currentStatus: bookmark.status,
+        nextStatus: args.status,
+        history: bookmark.statusHistory,
+        now: Date.now(),
+      });
     }
 
     await ctx.db.patch(bookmark._id, patch);
@@ -202,7 +248,9 @@ export const getUserBookmarks = query({
 export const backfillTrackedApplicationSnapshots = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const trackedApplications = await ctx.db.query("trackedApplications").collect();
+    const trackedApplications = await ctx.db
+      .query("trackedApplications")
+      .collect();
     let updatedCount = 0;
 
     for (const trackedApplication of trackedApplications) {

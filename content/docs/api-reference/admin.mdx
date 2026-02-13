@@ -23,13 +23,13 @@ const pending = useQuery(api.admin.getPendingJobs);
 
 ### `getApprovedJobs`
 
-Get all jobs with any status.
+Get all approved jobs.
 
 ```typescript
 const approvedJobs = useQuery(api.admin.getApprovedJobs);
 ```
 
-**Authentication:** Admin role required
+**Authentication:** Admin or Moderator role required
 
 **Returns:** Array of approved jobs.
 
@@ -37,7 +37,7 @@ const approvedJobs = useQuery(api.admin.getApprovedJobs);
 
 ### `updateJobStatus`
 
-Approve a pending job submission.
+Approve or reject a pending job submission.
 
 ```typescript
 const updateJobStatus = useMutation(api.admin.updateJobStatus);
@@ -55,7 +55,7 @@ await updateJobStatus({ jobId, status: "approved" });
 
 ### `markJobOutdated`
 
-Reject a pending job submission.
+Mark an approved job as outdated.
 
 ```typescript
 const markJobOutdated = useMutation(api.admin.markJobOutdated);
@@ -66,11 +66,11 @@ await markJobOutdated({ jobId });
 **Authentication:** Admin or Moderator role required
 
 **Parameters:**
-- `jobId` - ID of job to reject
+- `jobId` - ID of job to mark outdated
 
 **Returns:** Confirmation object.
 
-### `delete`
+### `deleteJob`
 
 Permanently delete a job.
 
@@ -80,7 +80,7 @@ const deleteJob = useMutation(api.admin.deleteJob);
 await deleteJob({ jobId });
 ```
 
-**Authentication:** Admin role required
+**Authentication:** Admin or Moderator role required
 
 **Parameters:**
 - `jobId` - ID of job to delete
@@ -88,16 +88,3 @@ await deleteJob({ jobId });
 **Returns:** Confirmation object.
 
 Deleted jobs are removed from listings; tracked applications remain available in user dashboards as closed entries.
-
-## Role Checking
-
-Admin functions validate roles from the `profiles` table:
-
-```typescript
-const identity = await ctx.auth.getUserIdentity();
-const role = identity?.publicMetadata?.role;
-
-if (role !== "admin" && role !== "moderator") {
-  throw new Error("Unauthorized");
-}
-```
