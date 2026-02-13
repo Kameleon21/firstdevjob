@@ -7,6 +7,15 @@ const roleLevelValidator = v.union(
   v.literal("earlyCareer"),
 );
 
+const applicationStatusValidator = v.union(
+  v.literal("saved"),
+  v.literal("applied"),
+  v.literal("interviewing"),
+  v.literal("offer"),
+  v.literal("rejected"),
+  v.literal("accepted"),
+);
+
 export default defineSchema({
   profiles: defineTable({
     userId: v.string(),
@@ -31,15 +40,13 @@ export default defineSchema({
       v.literal("outdated"),
     ),
     tags: v.optional(v.array(v.string())),
+    submitterUserId: v.optional(v.string()),
   })
     .index("by_status", ["status"])
+    .index("by_submitterUserId", ["submitterUserId"])
     .index("by_status_roleLevel", ["status", "roleLevel"])
     .index("by_status_location", ["status", "location"])
-    .index("by_status_roleLevel_location", [
-      "status",
-      "roleLevel",
-      "location",
-    ]),
+    .index("by_status_roleLevel_location", ["status", "roleLevel", "location"]),
 
   tags: defineTable({
     name: v.string(),
@@ -68,6 +75,15 @@ export default defineSchema({
       v.literal("accepted"),
     ),
     notes: v.optional(v.string()),
+    statusHistory: v.optional(
+      v.array(
+        v.object({
+          fromStatus: v.optional(applicationStatusValidator),
+          toStatus: applicationStatusValidator,
+          changedAt: v.number(),
+        }),
+      ),
+    ),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_jobId", ["userId", "jobId"]),

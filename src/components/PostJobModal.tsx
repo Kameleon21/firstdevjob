@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useMutation } from 'convex/react'
 import { X, Briefcase, Building2, MapPin, ExternalLink, Tag, AlertCircle, Plus } from 'lucide-react'
 import { api } from '../../convex/_generated/api'
+import { getPostJobErrorMessage, validatePostJobUrlInput } from '@/lib/postJobError'
 
 interface PostJobModalProps {
   isOpen: boolean
@@ -194,19 +195,21 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
         throw new Error('Please select a position level')
       }
 
+      const validatedUrl = validatePostJobUrlInput(formData.url)
+
       const result = await postJob({
         title: formData.title,
         company: formData.company,
         roleLevel: formData.roleLevel,
         location: formData.location,
-        url: formData.url,
+        url: validatedUrl,
         tags: formData.selectedTags,
       })
       resetForm()
       onClose()
       onSuccess(result.message)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to post job')
+      setError(getPostJobErrorMessage(err))
     } finally {
       setIsLoading(false)
     }
@@ -350,7 +353,8 @@ export default function PostJobModal({ isOpen, onClose, allTags, onSuccess }: Po
                   value={formData.url}
                   onChange={(e) => handleInputChange('url', e.target.value)}
                   className="w-full px-4 py-4 bg-muted/50 border border-border/50 rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring focus:bg-muted transition-all duration-200 backdrop-blur-sm"
-                  placeholder="https://example.com/careers/job-posting"
+                  placeholder="https://company.com/jobs/123"
+                  inputMode="url"
                   required
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-focus-within:opacity-100 transition-opacity duration-200 rounded-xl pointer-events-none" />

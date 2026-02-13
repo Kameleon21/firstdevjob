@@ -71,6 +71,12 @@ await postJob({
 
 **Returns:** Object with `success`, `jobId`, and `message`.
 
+**Submission security controls:**
+- Strict server-side input validation and normalization.
+- URL safety checks (`http`/`https`, no embedded credentials, no local/private-network hosts).
+- Tag sanitization and limits.
+- Per-user submission rate limiting.
+
 ## Internal Functions
 
 ### `deleteOldJobs`
