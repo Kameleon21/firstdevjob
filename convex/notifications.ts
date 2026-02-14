@@ -53,6 +53,9 @@ export const sendNewSubmissionStaffEmail = internalAction({
   handler: async (ctx, args) => {
     const recipients = parseEmailList(process.env.STAFF_NOTIFICATION_EMAILS);
     if (recipients.length === 0) {
+      console.warn(
+        "Skipping staff notification: STAFF_NOTIFICATION_EMAILS is not configured",
+      );
       return {
         success: false,
         reason: "missing_staff_recipients",
@@ -61,6 +64,9 @@ export const sendNewSubmissionStaffEmail = internalAction({
 
     const from = process.env.EMAIL_FROM?.trim();
     if (!from) {
+      console.warn(
+        "Skipping staff notification: EMAIL_FROM is not configured",
+      );
       return {
         success: false,
         reason: "missing_email_from",
