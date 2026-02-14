@@ -1,4 +1,5 @@
 import { query, mutation, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { inferRoleLevelFromTitle } from "./jobHelpers";
 import { requireAuth } from "./auth";
@@ -254,6 +255,19 @@ export const postJob = mutation({
           await ctx.db.insert("tags", { name: tagName });
         }
       }
+    }
+
+    try {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.notifications.sendNewSubmissionStaffEmail,
+        { jobId },
+      );
+    } catch (error) {
+      console.error("Failed to schedule staff submission notification", {
+        jobId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
     return {
