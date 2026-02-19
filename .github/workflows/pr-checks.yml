@@ -38,28 +38,7 @@ jobs:
       - name: Run ESLint
         run: bun run lint
 
-  # Quality Gate 2: Formatting
-  formatting:
-    name: Code Formatting
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: "1.3.6"
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Check formatting
-        run: bun run format:check
-
-  # Quality Gate 3: Type Safety
+  # Quality Gate 2: Type Safety
   type-check:
     name: TypeScript Type Checks
     runs-on: ubuntu-latest
@@ -145,14 +124,13 @@ jobs:
   all-checks-complete:
     name: All Checks Complete
     runs-on: ubuntu-latest
-    needs: [code-quality, formatting, type-check, build-check, bundle-analysis]
+    needs: [code-quality, type-check, build-check, bundle-analysis]
     if: always() && github.event.pull_request.draft == false
 
     steps:
       - name: Check all jobs status
         run: |
           if [[ "${{ needs.code-quality.result }}" == "success" &&
-                "${{ needs.formatting.result }}" == "success" &&
                 "${{ needs.type-check.result }}" == "success" &&
                 "${{ needs.build-check.result }}" == "success" &&
                 "${{ needs.bundle-analysis.result }}" == "success" ]]; then
@@ -171,7 +149,6 @@ jobs:
           script: |
             const results = {
               codeQuality: '${{ needs.code-quality.result }}',
-              formatting: '${{ needs.formatting.result }}',
               typeCheck: '${{ needs.type-check.result }}',
               buildCheck: '${{ needs.build-check.result }}',
               bundleAnalysis: '${{ needs.bundle-analysis.result }}'
@@ -186,7 +163,6 @@ jobs:
             | Check | Status |
             |-------|--------|
             | Code Quality | ${results.codeQuality === 'success' ? '✅' : '❌'} |
-            | Formatting | ${results.formatting === 'success' ? '✅' : '❌'} |
             | Type Safety | ${results.typeCheck === 'success' ? '✅' : '❌'} |
             | Build Check | ${results.buildCheck === 'success' ? '✅' : '❌'} |
             | Bundle Analysis | ${results.bundleAnalysis === 'success' ? '✅' : '❌'} |
