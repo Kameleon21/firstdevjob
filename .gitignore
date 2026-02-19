@@ -46,5 +46,5 @@ next-env.d.ts
 
 # fumadocs generated
 .source/
-plan/ 
+# plan/ 
 

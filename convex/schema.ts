@@ -20,11 +20,7 @@ export default defineSchema({
   profiles: defineTable({
     userId: v.string(),
     fullName: v.optional(v.string()),
-    role: v.union(
-      v.literal("user"),
-      v.literal("moderator"),
-      v.literal("admin"),
-    ),
+    role: v.union(v.literal("user"), v.literal("moderator"), v.literal("admin")),
   }).index("by_userId", ["userId"]),
 
   jobs: defineTable({
@@ -87,4 +83,21 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_userId_jobId", ["userId", "jobId"]),
+
+  emailSubscriptions: defineTable({
+    userId: v.string(),
+    email: v.string(),
+    unsubscribeToken: v.string(),
+    isActive: v.boolean(),
+    roleFilters: v.array(roleLevelValidator),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_unsubscribeToken", ["unsubscribeToken"])
+    .index("by_isActive", ["isActive"]),
+
+  jobNotificationDeliveries: defineTable({
+    jobId: v.id("jobs"),
+    userId: v.string(),
+    sentAt: v.number(),
+  }).index("by_jobId_userId", ["jobId", "userId"]),
 });

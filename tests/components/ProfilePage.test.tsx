@@ -23,6 +23,12 @@ jest.mock("../../convex/_generated/api", () => ({
       updateUserName: "profiles:updateUserName",
       deleteAccount: "profiles:deleteAccount",
     },
+    emailSubscriptions: {
+      getMySubscription: "emailSubscriptions:getMySubscription",
+      subscribe: "emailSubscriptions:subscribe",
+      updateRoleFilters: "emailSubscriptions:updateRoleFilters",
+      unsubscribeFromProfile: "emailSubscriptions:unsubscribeFromProfile",
+    },
   },
 }));
 
@@ -30,7 +36,7 @@ jest.mock("@clerk/nextjs", () => ({
   useUser: jest.fn(),
 }));
 
-jest.mock("@/components/SiteFooter", () => () => <footer data-testid="site-footer" />);
+jest.mock("../../src/components/SiteFooter", () => () => <footer data-testid="site-footer" />);
 
 import ProfilePage from "@/components/ProfilePage";
 
@@ -38,6 +44,12 @@ describe("ProfilePage account deletion", () => {
   beforeEach(() => {
     sessionStorage.clear();
     jest.clearAllMocks();
+    const mockProfile = {
+      id: "user-1",
+      email: "test@example.com",
+      fullName: "Test User",
+      role: "user",
+    };
 
     (useRouter as jest.Mock).mockReturnValue({
       push: jest.fn(),
@@ -56,11 +68,16 @@ describe("ProfilePage account deletion", () => {
       isLoaded: true,
     });
 
-    mockUseQuery.mockReturnValue({
-      id: "user-1",
-      email: "test@example.com",
-      fullName: "Test User",
-      role: "user",
+    mockUseQuery.mockImplementation((reference: string) => {
+      if (reference === "profiles:getUserProfile") {
+        return mockProfile;
+      }
+
+      if (reference === "emailSubscriptions:getMySubscription") {
+        return null;
+      }
+
+      return undefined;
     });
 
     mockUseMutation.mockImplementation((reference: string) => {
@@ -118,9 +135,7 @@ describe("ProfilePage account deletion", () => {
 
     expect(mockUserDelete).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
-    expect(
-      await screen.findByText("Failed to delete account data"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Failed to delete account data")).toBeInTheDocument();
     expect(sessionStorage.getItem("pendingToast")).toBeNull();
   });
 

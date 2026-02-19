@@ -14,6 +14,7 @@ import type * as auth from "../auth.js";
 import type * as bookmarks from "../bookmarks.js";
 import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
+import type * as emailSubscriptions from "../emailSubscriptions.js";
 import type * as jobHelpers from "../jobHelpers.js";
 import type * as jobSubmissionSecurity from "../jobSubmissionSecurity.js";
 import type * as jobs from "../jobs.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   bookmarks: typeof bookmarks;
   crons: typeof crons;
   dashboard: typeof dashboard;
+  emailSubscriptions: typeof emailSubscriptions;
   jobHelpers: typeof jobHelpers;
   jobSubmissionSecurity: typeof jobSubmissionSecurity;
   jobs: typeof jobs;
