@@ -125,10 +125,10 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
           </h3>
           {isClosed && (
             <div className="inline-flex flex-col gap-1">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-warning-background text-warning border border-warning">
+              <span className="inline-flex items-center px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium bg-warning-background text-warning border border-warning">
                 Job closed
               </span>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground break-words">
                 {closureReasonText}
               </p>
             </div>
@@ -264,9 +264,9 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
       </div>
 
       {/* Action Button */}
-      <div className="flex justify-between items-center pt-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 pt-2">
         {isClosed ? (
-          <span className="inline-flex items-center gap-2 text-muted-foreground text-sm px-3 py-2 border border-border rounded-lg bg-muted/50 cursor-not-allowed">
+          <span className="inline-flex items-center justify-center gap-2 text-muted-foreground text-sm px-3 py-2 border border-border rounded-lg bg-muted/50 cursor-not-allowed w-full sm:w-auto">
             <ExternalLink size={16} />
             Posting no longer available
           </span>
@@ -275,7 +275,7 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
             href={bookmark.job.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-accent hover:opacity-80 transition-colors text-sm"
+            className="flex items-center justify-center gap-2 text-accent hover:opacity-80 transition-colors text-sm px-3 py-2 border border-accent/30 rounded-lg w-full sm:w-auto sm:border-0 sm:px-0 sm:py-0"
           >
             <ExternalLink size={16} />
             View Job Posting
@@ -285,7 +285,7 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
           type="button"
           onClick={handleRemoveTrackedApplication}
           disabled={isRemoving}
-          className="inline-flex items-center gap-2 px-3 py-2 text-sm text-error border border-error/40 rounded-lg hover:bg-error-background/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm text-error border border-error/40 rounded-lg hover:bg-error-background/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
         >
           <Trash2 size={14} />
           {isRemoving ? 'Removing...' : 'Remove from tracker'}

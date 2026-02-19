@@ -57,10 +57,10 @@ export default function Toast({ message, type, isVisible, onClose, duration = 50
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 max-w-md w-full mx-4 transform transition-all duration-300 ease-in-out ${
+      className={`fixed top-4 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-4 z-50 max-w-md w-[calc(100%-2rem)] sm:w-full transform transition-all duration-300 ease-in-out ${
         isVisible
-          ? 'translate-x-0 opacity-100'
-          : 'translate-x-full opacity-0'
+          ? 'opacity-100'
+          : 'opacity-0 -translate-y-2'
       }`}
     >
       <div className={`${getBgColor()} border rounded-lg shadow-lg p-4`}>

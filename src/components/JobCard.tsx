@@ -7,15 +7,22 @@ import { api } from "../../convex/_generated/api";
 import { highlightText } from "@/lib/textHighlight";
 
 interface Job {
-  _id: Id<'jobs'>;
+  _id: Id<"jobs">;
   _creationTime: number;
   title: string;
   company: string;
   location?: string;
   url?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'outdated';
+  status: "pending" | "approved" | "rejected" | "outdated";
   tags?: string[];
+  roleLevel?: "intern" | "graduate" | "earlyCareer";
 }
+
+const roleLevelLabels: Record<string, string> = {
+  intern: "Intern",
+  graduate: "Graduate",
+  earlyCareer: "Early Career",
+};
 
 interface JobCardProps {
   job: Job;
@@ -119,6 +126,15 @@ export default function JobCard({
           )}
         </span>
       </div>
+
+      {/* Role Level Badge */}
+      {job.roleLevel && (
+        <div className="mb-4">
+          <span className="inline-block bg-accent/15 text-accent px-3 py-1 rounded-lg text-xs font-semibold border border-accent/30">
+            {roleLevelLabels[job.roleLevel]}
+          </span>
+        </div>
+      )}
 
       {/* Location with location icon */}
       <div className="flex items-center gap-3 mb-4">
