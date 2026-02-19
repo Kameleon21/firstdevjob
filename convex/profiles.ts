@@ -69,9 +69,25 @@ export const deleteAccount = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .collect();
 
-    await Promise.all(
-      trackedApplications.map((record) => ctx.db.delete(record._id)),
-    );
+    const emailSubscription = await ctx.db
+      .query("emailSubscriptions")
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .unique();
+
+    const notificationDeliveries = await ctx.db
+      .query("jobNotificationDeliveries")
+      .filter((q) => q.eq(q.field("userId"), identity.subject))
+      .collect();
+
+    await Promise.all(trackedApplications.map((record) => ctx.db.delete(record._id)));
+
+    await Promise.all(notificationDeliveries.map((delivery) => ctx.db.delete(delivery._id)));
+
+    let deletedEmailSubscription = false;
+    if (emailSubscription) {
+      await ctx.db.delete(emailSubscription._id);
+      deletedEmailSubscription = true;
+    }
 
     let deletedProfile = false;
     if (profile) {
@@ -82,6 +98,8 @@ export const deleteAccount = mutation({
     return {
       success: true,
       deletedTrackedApplicationsCount: trackedApplications.length,
+      deletedNotificationDeliveriesCount: notificationDeliveries.length,
+      deletedEmailSubscription,
       deletedProfile,
     };
   },

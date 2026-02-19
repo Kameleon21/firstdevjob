@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalAction, internalQuery } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { resend } from "./resend";
 
 function normalizeSiteUrl(value: string | undefined): string | null {
@@ -48,14 +48,61 @@ export const getJobForStaffNotification = internalQuery({
   },
 });
 
+export const getJobForUserNotification = internalQuery({
+  args: { jobId: v.id("jobs") },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.jobId);
+    if (!job || job.status !== "approved") {
+      return null;
+    }
+
+    return {
+      id: job._id,
+      title: job.title,
+      company: job.company,
+      location: job.location ?? "",
+      url: job.url ?? "",
+      roleLevel: job.roleLevel,
+    };
+  },
+});
+
+export const hasJobNotificationDelivery = internalQuery({
+  args: {
+    jobId: v.id("jobs"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const deliveries = await ctx.db
+      .query("jobNotificationDeliveries")
+      .withIndex("by_jobId_userId", (q) => q.eq("jobId", args.jobId).eq("userId", args.userId))
+      .collect();
+
+    return deliveries.length > 0;
+  },
+});
+
+export const createJobNotificationDelivery = internalMutation({
+  args: {
+    jobId: v.id("jobs"),
+    userId: v.string(),
+    sentAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("jobNotificationDeliveries", {
+      jobId: args.jobId,
+      userId: args.userId,
+      sentAt: args.sentAt,
+    });
+  },
+});
+
 export const sendNewSubmissionStaffEmail = internalAction({
   args: { jobId: v.id("jobs") },
   handler: async (ctx, args) => {
     const recipients = parseEmailList(process.env.STAFF_NOTIFICATION_EMAILS);
     if (recipients.length === 0) {
-      console.warn(
-        "Skipping staff notification: STAFF_NOTIFICATION_EMAILS is not configured",
-      );
+      console.warn("Skipping staff notification: STAFF_NOTIFICATION_EMAILS is not configured");
       return {
         success: false,
         reason: "missing_staff_recipients",
@@ -64,19 +111,16 @@ export const sendNewSubmissionStaffEmail = internalAction({
 
     const from = process.env.EMAIL_FROM?.trim();
     if (!from) {
-      console.warn(
-        "Skipping staff notification: EMAIL_FROM is not configured",
-      );
+      console.warn("Skipping staff notification: EMAIL_FROM is not configured");
       return {
         success: false,
         reason: "missing_email_from",
       } as const;
     }
 
-    const job = await ctx.runQuery(
-      internal.notifications.getJobForStaffNotification,
-      { jobId: args.jobId },
-    );
+    const job = await ctx.runQuery(internal.notifications.getJobForStaffNotification, {
+      jobId: args.jobId,
+    });
     if (!job) {
       return {
         success: false,
@@ -152,6 +196,154 @@ export const sendNewSubmissionStaffEmail = internalAction({
       success: sentCount > 0,
       attemptedCount: recipients.length,
       sentCount,
+    } as const;
+  },
+});
+
+export const sendJobApprovedUserEmails = internalAction({
+  args: { jobId: v.id("jobs") },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<
+    | {
+        success: false;
+        reason: "missing_email_from" | "job_not_found_or_not_approved";
+      }
+    | {
+        success: true;
+        attemptedCount: number;
+        sentCount: number;
+        dedupedCount: number;
+      }
+  > => {
+    const from = process.env.EMAIL_FROM?.trim();
+    if (!from) {
+      console.warn("Skipping user approval notification: EMAIL_FROM is not configured");
+      return {
+        success: false,
+        reason: "missing_email_from",
+      } as const;
+    }
+
+    const job = await ctx.runQuery(internal.notifications.getJobForUserNotification, {
+      jobId: args.jobId,
+    });
+    if (!job) {
+      return {
+        success: false,
+        reason: "job_not_found_or_not_approved",
+      } as const;
+    }
+
+    const subscribers = await ctx.runQuery(
+      internal.emailSubscriptions.getActiveSubscribersForRole,
+      { roleLevel: job.roleLevel },
+    );
+
+    const siteUrl = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
+    const browseJobsUrl = siteUrl ? `${siteUrl}/` : null;
+    const locationText = job.location || "N/A";
+    const roleLevelText = job.roleLevel ?? "Not specified";
+    const applyLink = job.url?.trim();
+    const applyUrl = applyLink && applyLink.length > 0 ? applyLink : null;
+    const noReplyNotice =
+      "This is an automated no-reply notification email. Please do not reply to this message.";
+    const replyTo = parseEmailList(process.env.EMAIL_REPLY_TO);
+
+    let sentCount = 0;
+    let dedupedCount = 0;
+
+    for (const subscriber of subscribers) {
+      try {
+        const alreadyDelivered = await ctx.runQuery(
+          internal.notifications.hasJobNotificationDelivery,
+          {
+            jobId: args.jobId,
+            userId: subscriber.userId,
+          },
+        );
+
+        if (alreadyDelivered) {
+          dedupedCount += 1;
+          continue;
+        }
+
+        const unsubscribeUrl = siteUrl
+          ? `${siteUrl}/unsubscribe?token=${encodeURIComponent(subscriber.unsubscribeToken)}`
+          : null;
+
+        const subject = `New approved job: ${job.title} at ${job.company}`;
+        const text = [
+          "A new job matching your notification settings was approved.",
+          "",
+          `Title: ${job.title}`,
+          `Company: ${job.company}`,
+          `Location: ${locationText}`,
+          `Role Level: ${roleLevelText}`,
+          `Apply Link: ${applyUrl ?? "N/A"}`,
+          `Browse All Jobs: ${browseJobsUrl ?? "NEXT_PUBLIC_SITE_URL is not configured."}`,
+          `Unsubscribe: ${unsubscribeUrl ?? "NEXT_PUBLIC_SITE_URL is not configured."}`,
+          "",
+          noReplyNotice,
+        ].join("\n");
+
+        const applyLinkHtml = applyUrl
+          ? `<p><a href="${escapeHtml(applyUrl)}">Apply to this job</a></p>`
+          : "<p><strong>Apply Link:</strong> N/A</p>";
+        const browseJobsLinkHtml = browseJobsUrl
+          ? `<p><a href="${escapeHtml(browseJobsUrl)}">Browse all jobs</a></p>`
+          : "<p><strong>Browse All Jobs:</strong> NEXT_PUBLIC_SITE_URL is not configured.</p>";
+        const unsubscribeLinkHtml = unsubscribeUrl
+          ? `<p><a href="${escapeHtml(unsubscribeUrl)}">Unsubscribe from these emails</a></p>`
+          : "<p><strong>Unsubscribe:</strong> NEXT_PUBLIC_SITE_URL is not configured.</p>";
+
+        const html = `
+          <p>A new job matching your notification settings was approved.</p>
+          <ul>
+            <li><strong>Title:</strong> ${escapeHtml(job.title)}</li>
+            <li><strong>Company:</strong> ${escapeHtml(job.company)}</li>
+            <li><strong>Location:</strong> ${escapeHtml(locationText)}</li>
+            <li><strong>Role Level:</strong> ${escapeHtml(roleLevelText)}</li>
+          </ul>
+          ${applyLinkHtml}
+          ${browseJobsLinkHtml}
+          ${unsubscribeLinkHtml}
+          <hr />
+          <p><strong>Note:</strong> ${escapeHtml(noReplyNotice)}</p>
+        `.trim();
+
+        await resend.sendEmail(ctx, {
+          from,
+          to: subscriber.email,
+          subject,
+          text,
+          html,
+          replyTo: replyTo.length > 0 ? replyTo : undefined,
+        });
+
+        await ctx.runMutation(internal.notifications.createJobNotificationDelivery, {
+          jobId: args.jobId,
+          userId: subscriber.userId,
+          sentAt: Date.now(),
+        });
+
+        sentCount += 1;
+      } catch (error) {
+        console.error("Failed to enqueue user job notification email", {
+          jobId: args.jobId,
+          userId: subscriber.userId,
+          recipient: subscriber.email,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return {
+      success: true,
+      attemptedCount: subscribers.length,
+      sentCount,
+      dedupedCount,
     } as const;
   },
 });

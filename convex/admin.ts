@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { requireAuth } from "./auth";
 
@@ -99,7 +100,15 @@ export const updateJobStatus = mutation({
       throw new Error("Job not found");
     }
 
+    const previousStatus = job.status;
     await ctx.db.patch(job._id, { status: args.status });
+
+    if (previousStatus !== "approved" && args.status === "approved") {
+      await ctx.scheduler.runAfter(0, internal.notifications.sendJobApprovedUserEmails, {
+        jobId: args.jobId,
+      });
+    }
+
     return { success: true };
   },
 });

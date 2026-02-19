@@ -67,6 +67,7 @@
 - Save the plans in make in plan/ dir if the dir does not exist create it and name each plan something easy to understand
 - don't read the .env.local file
 - don't include yourself in commits
+- exclude plan/ and todo/ from commits
 - before pushing, run all CI checks locally that match `.github/workflows/`:
   1. `bun run lint` (ESLint)
   2. `bunx tsc --noEmit` (TypeScript type check)
