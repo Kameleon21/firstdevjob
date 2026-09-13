@@ -1,4 +1,10 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import {
+  query,
+  mutation,
+  internalMutation,
+  type MutationCtx,
+} from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { inferRoleLevelFromTitle } from "./jobHelpers";
@@ -16,63 +22,91 @@ const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 const MAX_SUBMISSIONS_PER_HOUR = 6;
 const MAX_SUBMISSIONS_PER_DAY = 20;
 
-export const deleteOldJobs = internalMutation({
-  handler: async (ctx) => {
-    const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
-    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+const CLEANUP_BATCH_SIZE = 100;
+const UNAPPROVED_RETENTION_MS = 14 * ONE_DAY_MS;
+const APPROVED_ACTIVE_MS = 14 * ONE_DAY_MS;
+const OUTDATED_RETENTION_MS = 30 * ONE_DAY_MS;
 
+type JobStatus = Doc<"jobs">["status"];
+
+async function findStaleJobs(
+  ctx: MutationCtx,
+  status: JobStatus,
+  createdBefore: number,
+) {
+  return ctx.db
+    .query("jobs")
+    .withIndex("by_status", (q) =>
+      q.eq("status", status).lt("_creationTime", createdBefore),
+    )
+    .take(CLEANUP_BATCH_SIZE);
+}
+
+async function deleteJobWithRelatedRecords(ctx: MutationCtx, jobId: Id<"jobs">) {
+  const deliveries = await ctx.db
+    .query("jobNotificationDeliveries")
+    .withIndex("by_jobId_userId", (q) => q.eq("jobId", jobId))
+    .collect();
+  await Promise.all(deliveries.map((delivery) => ctx.db.delete(delivery._id)));
+  await ctx.db.delete(jobId);
+}
+
+export const deleteOldJobs = internalMutation({
+  args: {},
+  handler: async (
+    ctx,
+  ): Promise<{ deletedCount: number; markedOutdatedCount: number }> => {
+    const now = Date.now();
     let deletedCount = 0;
     let markedOutdatedCount = 0;
 
-    // 1. Hard delete old pending/rejected jobs (older than 2 weeks)
-    const oldNonApprovedJobs = await ctx.db
-      .query("jobs")
-      .filter((q) =>
-        q.and(
-          q.lt(q.field("_creationTime"), twoWeeksAgo),
-          q.or(
-            q.eq(q.field("status"), "pending"),
-            q.eq(q.field("status"), "rejected"),
-          ),
-        ),
-      )
-      .collect();
-
-    for (const job of oldNonApprovedJobs) {
-      await ctx.db.delete(job._id);
+    // Each step is capped so the transaction stays within Convex limits;
+    // when a cap is hit the mutation reschedules itself to finish the backlog.
+    const stalePending = await findStaleJobs(
+      ctx,
+      "pending",
+      now - UNAPPROVED_RETENTION_MS,
+    );
+    const staleRejected = await findStaleJobs(
+      ctx,
+      "rejected",
+      now - UNAPPROVED_RETENTION_MS,
+    );
+    for (const job of [...stalePending, ...staleRejected]) {
+      await deleteJobWithRelatedRecords(ctx, job._id);
       deletedCount++;
     }
 
-    // 2. Soft delete: Mark approved jobs as "outdated" after 2 weeks
-    const oldApprovedJobs = await ctx.db
-      .query("jobs")
-      .filter((q) =>
-        q.and(
-          q.lt(q.field("_creationTime"), twoWeeksAgo),
-          q.eq(q.field("status"), "approved"),
-        ),
-      )
-      .collect();
+    // Delete expired outdated jobs before marking new ones, so a job is never
+    // marked outdated and hard-deleted in the same run.
+    const expiredOutdated = await findStaleJobs(
+      ctx,
+      "outdated",
+      now - OUTDATED_RETENTION_MS,
+    );
+    for (const job of expiredOutdated) {
+      await deleteJobWithRelatedRecords(ctx, job._id);
+      deletedCount++;
+    }
 
-    for (const job of oldApprovedJobs) {
+    const staleApproved = await findStaleJobs(
+      ctx,
+      "approved",
+      now - APPROVED_ACTIVE_MS,
+    );
+    for (const job of staleApproved) {
       await ctx.db.patch(job._id, { status: "outdated" });
       markedOutdatedCount++;
     }
 
-    // 3. Hard delete outdated jobs after 30 days (extended retention)
-    const oldOutdatedJobs = await ctx.db
-      .query("jobs")
-      .filter((q) =>
-        q.and(
-          q.lt(q.field("_creationTime"), thirtyDaysAgo),
-          q.eq(q.field("status"), "outdated"),
-        ),
-      )
-      .collect();
-
-    for (const job of oldOutdatedJobs) {
-      await ctx.db.delete(job._id);
-      deletedCount++;
+    const hitBatchLimit = [
+      stalePending,
+      staleRejected,
+      expiredOutdated,
+      staleApproved,
+    ].some((batch) => batch.length === CLEANUP_BATCH_SIZE);
+    if (hitBatchLimit) {
+      await ctx.scheduler.runAfter(0, internal.jobs.deleteOldJobs, {});
     }
 
     return { deletedCount, markedOutdatedCount };

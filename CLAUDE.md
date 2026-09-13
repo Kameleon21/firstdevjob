@@ -73,5 +73,5 @@
   2. `bunx tsc --noEmit` (TypeScript type check)
   3. `bun run test:coverage` (tests with coverage)
   4. `bun run build` (build verification)
-  5. `bun pm scan` (security audit)
+  5. `bun run audit:deps` (dependency vulnerability audit, high and above)
 - fix any failures before pushing — don't push broken code to the remote

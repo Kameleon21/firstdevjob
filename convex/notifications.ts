@@ -208,7 +208,10 @@ export const sendJobApprovedUserEmails = internalAction({
   ): Promise<
     | {
         success: false;
-        reason: "missing_email_from" | "job_not_found_or_not_approved";
+        reason:
+          | "missing_email_from"
+          | "site_url_not_configured"
+          | "job_not_found_or_not_approved";
       }
     | {
         success: true;
@@ -242,7 +245,13 @@ export const sendJobApprovedUserEmails = internalAction({
     );
 
     const siteUrl = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
-    const browseJobsUrl = siteUrl ? `${siteUrl}/` : null;
+    if (!siteUrl) {
+      console.warn(
+        "Skipping user approval notification: NEXT_PUBLIC_SITE_URL is not configured",
+      );
+      return { success: false, reason: "site_url_not_configured" } as const;
+    }
+    const browseJobsUrl = `${siteUrl}/`;
     const locationText = job.location || "N/A";
     const roleLevelText = job.roleLevel ?? "Not specified";
     const applyLink = job.url?.trim();
@@ -269,9 +278,7 @@ export const sendJobApprovedUserEmails = internalAction({
           continue;
         }
 
-        const unsubscribeUrl = siteUrl
-          ? `${siteUrl}/unsubscribe?token=${encodeURIComponent(subscriber.unsubscribeToken)}`
-          : null;
+        const unsubscribeUrl = `${siteUrl}/unsubscribe?token=${encodeURIComponent(subscriber.unsubscribeToken)}`;
 
         const subject = `New approved job: ${job.title} at ${job.company}`;
         const text = [
@@ -282,8 +289,8 @@ export const sendJobApprovedUserEmails = internalAction({
           `Location: ${locationText}`,
           `Role Level: ${roleLevelText}`,
           `Apply Link: ${applyUrl ?? "N/A"}`,
-          `Browse All Jobs: ${browseJobsUrl ?? "NEXT_PUBLIC_SITE_URL is not configured."}`,
-          `Unsubscribe: ${unsubscribeUrl ?? "NEXT_PUBLIC_SITE_URL is not configured."}`,
+          `Browse All Jobs: ${browseJobsUrl}`,
+          `Unsubscribe: ${unsubscribeUrl}`,
           "",
           noReplyNotice,
         ].join("\n");
@@ -291,12 +298,8 @@ export const sendJobApprovedUserEmails = internalAction({
         const applyLinkHtml = applyUrl
           ? `<p><a href="${escapeHtml(applyUrl)}">Apply to this job</a></p>`
           : "<p><strong>Apply Link:</strong> N/A</p>";
-        const browseJobsLinkHtml = browseJobsUrl
-          ? `<p><a href="${escapeHtml(browseJobsUrl)}">Browse all jobs</a></p>`
-          : "<p><strong>Browse All Jobs:</strong> NEXT_PUBLIC_SITE_URL is not configured.</p>";
-        const unsubscribeLinkHtml = unsubscribeUrl
-          ? `<p><a href="${escapeHtml(unsubscribeUrl)}">Unsubscribe from these emails</a></p>`
-          : "<p><strong>Unsubscribe:</strong> NEXT_PUBLIC_SITE_URL is not configured.</p>";
+        const browseJobsLinkHtml = `<p><a href="${escapeHtml(browseJobsUrl)}">Browse all jobs</a></p>`;
+        const unsubscribeLinkHtml = `<p><a href="${escapeHtml(unsubscribeUrl)}">Unsubscribe from these emails</a></p>`;
 
         const html = `
           <p>A new job matching your notification settings was approved.</p>

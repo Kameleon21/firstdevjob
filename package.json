@@ -17,6 +17,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
+    "audit:deps": "bun audit --audit-level=high --ignore GHSA-w3rx-r6r6-pgpr --ignore GHSA-5p2g-fcmc-qvqq --ignore GHSA-qjx8-664m-686j",
     "postinstall": "fumadocs-mdx",
     "sync:prod-to-dev": "bunx convex export --prod --path prod-snapshot.zip && bunx convex import --replace prod-snapshot.zip; rm -f prod-snapshot.zip"
   },

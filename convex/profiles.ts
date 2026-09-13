@@ -76,7 +76,7 @@ export const deleteAccount = mutation({
 
     const notificationDeliveries = await ctx.db
       .query("jobNotificationDeliveries")
-      .filter((q) => q.eq(q.field("userId"), identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .collect();
 
     await Promise.all(trackedApplications.map((record) => ctx.db.delete(record._id)));

@@ -42,8 +42,18 @@ export const toggleBookmark = mutation({
       .unique();
 
     if (existing) {
+      const hasProgress =
+        existing.status !== "saved" ||
+        (existing.notes?.trim().length ?? 0) > 0;
+
+      if (hasProgress) {
+        // Never destroy status or notes from a list-page toggle; the
+        // dashboard has the confirm-gated remove.
+        return { bookmarked: true, tracked: true };
+      }
+
       await ctx.db.delete(existing._id);
-      return { bookmarked: false };
+      return { bookmarked: false, tracked: false };
     }
 
     await ctx.db.insert("trackedApplications", {
@@ -59,7 +69,7 @@ export const toggleBookmark = mutation({
       ],
     });
 
-    return { bookmarked: true };
+    return { bookmarked: true, tracked: false };
   },
 });
 

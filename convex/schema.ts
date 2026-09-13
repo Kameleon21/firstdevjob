@@ -99,5 +99,7 @@ export default defineSchema({
     jobId: v.id("jobs"),
     userId: v.string(),
     sentAt: v.number(),
-  }).index("by_jobId_userId", ["jobId", "userId"]),
+  })
+    .index("by_jobId_userId", ["jobId", "userId"])
+    .index("by_userId", ["userId"]),
 });

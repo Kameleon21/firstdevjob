@@ -14,15 +14,25 @@ export type ApplicationStatusHistoryEntry = {
 
 export const MAX_NOTES_LENGTH = 2000;
 
-const allowedStatusTransitions: Record<ApplicationStatus, ApplicationStatus[]> =
-  {
-    saved: ["applied", "rejected"],
-    applied: ["interviewing", "offer", "rejected"],
-    interviewing: ["offer", "rejected"],
-    offer: ["accepted", "rejected"],
-    rejected: [],
-    accepted: [],
-  };
+// Forward progress plus a way back out of the end states, so a mis-click on
+// "Rejected" or "Accepted" is recoverable without deleting the record.
+export const allowedStatusTransitions: Record<
+  ApplicationStatus,
+  ApplicationStatus[]
+> = {
+  saved: ["applied", "interviewing", "rejected"],
+  applied: ["interviewing", "offer", "rejected"],
+  interviewing: ["offer", "rejected"],
+  offer: ["accepted", "rejected"],
+  rejected: ["saved", "applied", "interviewing", "offer"],
+  accepted: ["offer", "rejected"],
+};
+
+export function getAllowedStatusTransitions(
+  from: ApplicationStatus,
+): ApplicationStatus[] {
+  return allowedStatusTransitions[from];
+}
 
 export function canTransitionApplicationStatus(
   from: ApplicationStatus,

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import type { Id } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
+import { getAllowedStatusTransitions } from "../../convex/applicationIntegrity";
 import {
   ChevronDown,
   ExternalLink,
@@ -81,6 +82,12 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
 
   const currentStatusOption = statusOptions.find(
     (option) => option.value === currentStatus,
+  );
+  const allowedNextStatuses = getAllowedStatusTransitions(currentStatus);
+  const availableStatusOptions = statusOptions.filter(
+    (option) =>
+      option.value === currentStatus ||
+      allowedNextStatuses.includes(option.value),
   );
   const isClosed = bookmark.job.availability === "closed";
 
@@ -176,11 +183,13 @@ export default function DashboardJobCard({ bookmark }: DashboardJobCardProps) {
 
           {showDropdown && (
             <div className="absolute top-full right-0 mt-2 w-48 bg-muted border border-border rounded-lg shadow-xl z-10">
-              {statusOptions.map((option) => (
+              {availableStatusOptions.map((option) => (
                 <button
                   key={option.value}
+                  type="button"
+                  disabled={isUpdating || option.value === currentStatus}
                   onClick={() => handleStatusUpdate(option.value)}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-background/50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-background/50 transition-colors first:rounded-t-lg last:rounded-b-lg disabled:cursor-default disabled:opacity-60 ${
                     option.value === currentStatus ? "bg-background/50" : ""
                   }`}
                 >
