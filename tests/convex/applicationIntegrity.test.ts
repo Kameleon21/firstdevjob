@@ -1,6 +1,7 @@
 import {
   appendStatusHistory,
   canTransitionApplicationStatus,
+  getAllowedStatusTransitions,
   isNotesLengthValid,
   MAX_NOTES_LENGTH,
   normalizeNotes,
@@ -11,7 +12,19 @@ describe("applicationIntegrity", () => {
     expect(canTransitionApplicationStatus("saved", "applied")).toBe(true);
     expect(canTransitionApplicationStatus("saved", "accepted")).toBe(false);
     expect(canTransitionApplicationStatus("offer", "accepted")).toBe(true);
-    expect(canTransitionApplicationStatus("accepted", "rejected")).toBe(false);
+    expect(canTransitionApplicationStatus("saved", "interviewing")).toBe(true);
+    expect(canTransitionApplicationStatus("interviewing", "saved")).toBe(false);
+  });
+
+  it("lets users back out of rejected and accepted", () => {
+    expect(canTransitionApplicationStatus("rejected", "applied")).toBe(true);
+    expect(canTransitionApplicationStatus("accepted", "offer")).toBe(true);
+    expect(canTransitionApplicationStatus("accepted", "saved")).toBe(false);
+  });
+
+  it("exposes the allowed next statuses for the UI", () => {
+    expect(getAllowedStatusTransitions("offer")).toEqual(["accepted", "rejected"]);
+    expect(getAllowedStatusTransitions("rejected")).not.toHaveLength(0);
   });
 
   it("allows no-op status updates", () => {

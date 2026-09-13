@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useConvexAuth, useMutation } from "convex/react";
 import type { Id } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
@@ -40,6 +41,7 @@ export default function JobCard({
   const [isToggling, setIsToggling] = useState(false);
   const [optimisticBookmarked, setOptimisticBookmarked] =
     useState(isBookmarked);
+  const [isTrackedElsewhere, setIsTrackedElsewhere] = useState(false);
   const jobTags = job.tags ?? [];
   const jobLocation = job.location ?? "";
   const jobUrl = job.url ?? "#";
@@ -62,42 +64,59 @@ export default function JobCard({
           )}
         </h3>
         {isAuthenticated && (
-          <button
-            type="button"
-            disabled={isLoading || isToggling}
-            onClick={async () => {
-              const previousState = optimisticBookmarked;
-              setOptimisticBookmarked(!previousState);
-              setIsToggling(true);
-              try {
-                const result = await toggleBookmark({ jobId: job._id });
-                setOptimisticBookmarked(result.bookmarked);
-              } catch (error) {
-                setOptimisticBookmarked(previousState);
-                console.error("Error toggling bookmark:", error);
-              } finally {
-                setIsToggling(false);
+          <div className="flex flex-col items-end gap-1">
+            <button
+              type="button"
+              disabled={isLoading || isToggling}
+              onClick={async () => {
+                const previousState = optimisticBookmarked;
+                setOptimisticBookmarked(!previousState);
+                setIsToggling(true);
+                try {
+                  const result = await toggleBookmark({ jobId: job._id });
+                  setOptimisticBookmarked(result.bookmarked);
+                  setIsTrackedElsewhere(result.tracked);
+                } catch (error) {
+                  setOptimisticBookmarked(previousState);
+                  console.error("Error toggling bookmark:", error);
+                } finally {
+                  setIsToggling(false);
+                }
+              }}
+              className={`transition-colors ${
+                optimisticBookmarked ? "text-accent" : "text-muted-foreground"
+              } ${isLoading || isToggling ? "opacity-50 cursor-not-allowed" : "hover:text-accent"}`}
+              title={
+                isTrackedElsewhere
+                  ? "This application has progress. Manage it from your dashboard."
+                  : optimisticBookmarked
+                    ? "Remove bookmark"
+                    : "Save job"
               }
-            }}
-            className={`transition-colors ${
-              optimisticBookmarked ? "text-accent" : "text-muted-foreground"
-            } ${isLoading || isToggling ? "opacity-50 cursor-not-allowed" : "hover:text-accent"}`}
-            title={optimisticBookmarked ? "Remove bookmark" : "Save job"}
-          >
-            <svg
-              className="w-5 h-5"
-              fill={optimisticBookmarked ? "currentColor" : "none"}
-              stroke="currentColor"
-              viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-              />
-            </svg>
-          </button>
+              <svg
+                className="w-5 h-5"
+                fill={optimisticBookmarked ? "currentColor" : "none"}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                />
+              </svg>
+            </button>
+            {isTrackedElsewhere && (
+              <Link
+                href="/dashboard"
+                className="text-xs text-muted-foreground hover:text-accent whitespace-nowrap"
+              >
+                Tracked. Manage in dashboard
+              </Link>
+            )}
+          </div>
         )}
       </div>
 

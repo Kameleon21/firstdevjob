@@ -9,6 +9,7 @@ import HeroSection from './HeroSection'
 import JobSearchWrapper from './JobSearchWrapper'
 import Toast from './Toast'
 import SiteFooter from './SiteFooter'
+import { useAuth } from '@/hooks/useAuth'
 
 const PostJobModal = dynamic(() => import('./PostJobModal'), {
   ssr: false,
@@ -27,8 +28,16 @@ export default function PageWrapper() {
 
   const allTags = useQuery(api.tags.getAllTags, {})
   const resolvedTags = allTags ?? []
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth()
 
   const handleOpenPostJobModal = () => {
+    if (isAuthLoading) {
+      return
+    }
+    if (!isAuthenticated) {
+      setIsAuthModalOpen(true)
+      return
+    }
     setIsPostJobModalOpen(true)
   }
 

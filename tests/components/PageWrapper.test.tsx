@@ -16,6 +16,11 @@ jest.mock('../../convex/_generated/api', () => ({
   },
 }))
 
+let mockIsAuthenticated = true
+jest.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({ user: null, isAuthenticated: mockIsAuthenticated, isLoading: false }),
+}))
+
 // Mock child components
 jest.mock('@/components/Header', () => ({ onPostJobClick }: { onPostJobClick: () => void }) => (
   <header>
@@ -25,6 +30,7 @@ jest.mock('@/components/Header', () => ({ onPostJobClick }: { onPostJobClick: ()
 jest.mock('@/components/HeroSection', () => () => <div data-testid="hero-section" />)
 jest.mock('@/components/JobSearchWrapper', () => () => <div data-testid="job-search-wrapper" />)
 jest.mock('@/components/PostJobModal', () => () => <div data-testid="post-job-modal" />)
+jest.mock('@/components/AuthModal', () => () => <div data-testid="auth-modal" />)
 jest.mock('@/components/SiteFooter', () => () => <footer data-testid="site-footer" />)
 jest.mock('@/components/Toast', () => ({ message, type, isVisible }: { message: string; type: string; isVisible: boolean }) =>
   isVisible ? <div data-testid="toast">{`${type}:${message}`}</div> : null
@@ -35,6 +41,7 @@ import PageWrapper from '@/components/PageWrapper'
 describe('PageWrapper', () => {
   beforeEach(() => {
     sessionStorage.clear()
+    mockIsAuthenticated = true
   })
 
   it('renders the main page components', () => {
@@ -62,6 +69,18 @@ describe('PageWrapper', () => {
     await waitFor(() => {
       expect(screen.getByTestId('post-job-modal')).toBeInTheDocument()
     })
+  })
+
+  it('opens the auth modal instead of the post job form for anonymous users', async () => {
+    mockIsAuthenticated = false
+    render(<PageWrapper />)
+
+    fireEvent.click(screen.getByTestId('post-job-button'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-modal')).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('post-job-modal')).not.toBeInTheDocument()
   })
 
   it('shows one-time toast from pending sessionStorage payload and clears it', async () => {

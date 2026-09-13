@@ -57,19 +57,16 @@ export const subscribe = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
       .unique();
 
-    const nextValues = {
-      email,
-      unsubscribeToken: crypto.randomUUID(),
-      isActive: true,
-      roleFilters,
-    };
-
     if (subscription) {
-      await ctx.db.patch(subscription._id, nextValues);
+      // Keep the existing token so unsubscribe links already in inboxes stay valid.
+      await ctx.db.patch(subscription._id, { email, isActive: true, roleFilters });
     } else {
       await ctx.db.insert("emailSubscriptions", {
         userId: identity.subject,
-        ...nextValues,
+        email,
+        unsubscribeToken: crypto.randomUUID(),
+        isActive: true,
+        roleFilters,
       });
     }
 
