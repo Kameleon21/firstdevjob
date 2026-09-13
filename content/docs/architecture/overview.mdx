@@ -10,30 +10,29 @@ FirstDevJob is a Next.js 16 App Router frontend deployed on Vercel, backed by a 
 <Mermaid
   title="Runtime request paths and how each half of the app is deployed"
   chart={`
-flowchart LR
-  subgraph Runtime
+flowchart TD
+  subgraph Delivery["Delivery: every push to Master"]
+    direction LR
+    GH["Push to Master"] -->|"deploy.yml"| GA["GitHub Actions"]
+    GH -->|"Git integration"| VG["Vercel build"]
+  end
+  subgraph Runtime["Runtime"]
+    direction TB
     B["Browser"]
     APP["Next.js app on Vercel"]
     CLK["Clerk"]
     CX["Convex deployment"]
     RS["Resend"]
   end
-  subgraph Delivery
-    GH["Push to Master"]
-    GA["GitHub Actions deploy.yml"]
-    VG["Vercel Git integration"]
-  end
+  GA -->|"bunx convex deploy"| CX
+  VG -->|"next build and deploy"| APP
   B -->|"HTTP page loads"| APP
   B -->|"sign in"| CLK
   CLK -->|"session JWT"| B
   B -->|"queries and mutations over WebSocket"| CX
-  CX -->|"verifies JWT against CLERK_JWT_ISSUER_DOMAIN"| CLK
-  CX -->|"convex-dev/resend component"| RS
+  CX -->|"verifies JWT via CLERK_JWT_ISSUER_DOMAIN"| CLK
+  CX -->|"@convex-dev/resend component"| RS
   RS -->|"staff and subscriber email"| B
-  GH --> GA
-  GH --> VG
-  GA -->|"bunx convex deploy"| CX
-  VG -->|"next build and deploy"| APP
 `}
 />
 

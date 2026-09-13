@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 const mockInitialize = jest.fn()
@@ -47,6 +47,23 @@ describe('Mermaid', () => {
     expect(config.securityLevel).toBe('strict')
     expect(config.themeVariables.background).toBe('#ffffff')
     expect(mockRender.mock.calls[0][0]).toMatch(/-light$/)
+  })
+
+  it('opens and closes the expanded view', async () => {
+    mockRender.mockResolvedValue({ svg: '<svg></svg>' })
+    const showModal = jest.fn()
+    const close = jest.fn()
+    HTMLDialogElement.prototype.showModal = showModal
+    HTMLDialogElement.prototype.close = close
+
+    render(<Mermaid chart="flowchart LR\n A --> B" title="A to B" />)
+    await screen.findByRole('img', { name: 'A to B' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand diagram: A to B' }))
+    expect(showModal).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close expanded diagram', hidden: true }))
+    expect(close).toHaveBeenCalledTimes(1)
   })
 
   it('shows the error instead of crashing when the chart is invalid', async () => {

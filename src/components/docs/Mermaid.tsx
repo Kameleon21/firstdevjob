@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { Maximize2, X } from 'lucide-react';
 
 interface MermaidProps {
   /** Mermaid diagram source. */
@@ -79,7 +80,12 @@ export function Mermaid({ chart, title }: MermaidProps) {
   const { resolvedTheme } = useTheme();
   const [svg, setSvg] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const source = chart.trim();
+  const label = title ?? 'Diagram';
+
+  const openFullscreen = () => dialogRef.current?.showModal();
+  const closeFullscreen = () => dialogRef.current?.close();
 
   useEffect(() => {
     let cancelled = false;
@@ -121,18 +127,53 @@ export function Mermaid({ chart, title }: MermaidProps) {
   }, [source, reactId, resolvedTheme]);
 
   return (
-    <figure className="not-prose my-6 rounded-lg border border-fd-border bg-fd-card p-4">
+    <figure className="not-prose group relative my-6 rounded-lg border border-fd-border bg-fd-card p-4">
       {error ? (
         <pre className="overflow-x-auto whitespace-pre-wrap text-sm text-red-600 dark:text-red-400">
           Diagram failed to render: {error}
         </pre>
       ) : svg ? (
-        <div
-          role="img"
-          aria-label={title ?? 'Diagram'}
-          className="overflow-x-auto [&>svg]:mx-auto [&>svg]:h-auto [&>svg]:max-w-full"
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
+        <>
+          <button
+            type="button"
+            onClick={openFullscreen}
+            className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-fd-border bg-fd-background/80 px-2 py-1 text-xs text-fd-muted-foreground opacity-0 transition-opacity hover:text-fd-foreground focus-visible:opacity-100 group-hover:opacity-100"
+            aria-label={`Expand diagram: ${label}`}
+          >
+            <Maximize2 className="size-3.5" aria-hidden="true" />
+            Expand
+          </button>
+          <div
+            role="img"
+            aria-label={label}
+            className="mermaid-diagram overflow-x-auto [&>svg]:mx-auto [&>svg]:h-auto [&>svg]:max-w-full"
+            dangerouslySetInnerHTML={{ __html: svg }}
+          />
+          <dialog
+            ref={dialogRef}
+            aria-label={`${label} (expanded)`}
+            onClick={(event) => {
+              if (event.target === event.currentTarget) closeFullscreen();
+            }}
+            className="m-auto w-[min(96vw,1600px)] max-w-none rounded-xl border border-fd-border bg-fd-background p-0 text-fd-foreground shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+          >
+            <div className="flex items-center justify-between gap-4 border-b border-fd-border px-4 py-2">
+              <span className="text-sm text-fd-muted-foreground">{label}</span>
+              <button
+                type="button"
+                onClick={closeFullscreen}
+                className="inline-flex items-center gap-1 rounded-md p-1.5 text-fd-muted-foreground hover:bg-fd-accent hover:text-fd-foreground"
+                aria-label="Close expanded diagram"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </div>
+            <div
+              className="max-h-[85vh] overflow-auto p-6 [&>svg]:mx-auto [&>svg]:h-auto [&>svg]:w-full [&>svg]:!max-w-none"
+              dangerouslySetInnerHTML={{ __html: svg }}
+            />
+          </dialog>
+        </>
       ) : (
         <div
           className="h-48 animate-pulse rounded-md bg-fd-muted"
