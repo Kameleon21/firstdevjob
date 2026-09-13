@@ -48,3 +48,6 @@ next-env.d.ts
 .source/
 # plan/ 
 
+
+# convex prod snapshot (contains PII)
+prod-snapshot.zip
