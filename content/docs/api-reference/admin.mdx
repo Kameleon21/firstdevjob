@@ -1,90 +1,161 @@
 ---
 title: Admin API
-description: Convex functions for admin operations
+description: Convex functions for moderating job submissions
 ---
 
-# Admin API
+`convex/admin.ts` is the moderation queue: read what is waiting, approve or reject it, close listings that have gone stale, and delete outright. Every function except `checkUserRole` is gated by the same helper, and approval is the one action in the whole backend that sends email to users.
 
-Functions for moderating jobs and managing the platform.
+## Authorization
 
-## Queries
+`requireModOrAdmin` runs first in every gated function. It resolves the Clerk identity, loads the caller's `profiles` row, and requires `role` to be `moderator` or `admin`.
 
-### `getPendingJobs`
+| Situation | Error thrown |
+|---|---|
+| No Clerk identity on the request | `Not authenticated` |
+| No profile row, or `role` is `user` | `Unauthorized` |
 
-Get all jobs pending review.
+`admin` and `moderator` have identical backend permissions — nothing in `convex/admin.ts` distinguishes them. The split only exists in the UI. Roles are set by editing the `profiles` row in the Convex dashboard; no function promotes a user.
 
-```typescript
-const pending = useQuery(api.admin.getPendingJobs);
-```
+## `checkUserRole`
 
-**Authentication:** Admin or Moderator role required
+| | |
+|---|---|
+| Kind | `query` |
+| Auth | Anonymous allowed |
+| Args | none |
 
-**Returns:** Array of pending job submissions.
+**Returns:**
 
-### `getApprovedJobs`
+| Caller | Shape |
+|---|---|
+| Signed out | `{ isAdmin: false, isModerator: false }` |
+| Signed in, no profile row | `{ isAdmin: false, isModerator: false, userEmail }` |
+| Signed in with a profile | `{ isAdmin, isModerator, userEmail, role }` |
 
-Get all approved jobs.
+`isModerator` is `true` for admins as well as moderators, so it is the flag to branch on for moderation UI.
 
-```typescript
-const approvedJobs = useQuery(api.admin.getApprovedJobs);
-```
+<Callout type="info">
+  The app does not call this query. `dashboard.getDashboardData` returns the same object as its `userRole` field, alongside the user's bookmarks and the pending queue, in one round trip.
+</Callout>
 
-**Authentication:** Admin or Moderator role required
+## `getPendingJobs`
 
-**Returns:** Array of approved jobs.
+| | |
+|---|---|
+| Kind | `query` |
+| Auth | Moderator or admin |
+| Args | none |
 
-## Mutations
+**Returns:** every job with `status: "pending"`, newest first, as `{ id, createdAt, title, company, location, url, status, tags }`. Note `id` and `createdAt`, not the raw `_id` and `_creationTime`.
 
-### `updateJobStatus`
+Superseded in the app by the `pendingJobs` field of `dashboard.getDashboardData`, which returns the identical shape and is empty for non-moderators.
 
-Approve or reject a pending job submission.
+## `getPendingJobsCount`
+
+| | |
+|---|---|
+| Kind | `query` |
+| Auth | Moderator or admin |
+| Args | none |
+
+**Returns:** a `number` — the length of the pending queue. Currently unused by the app.
+
+## `getApprovedJobs`
+
+| | |
+|---|---|
+| Kind | `query` |
+| Auth | Moderator or admin |
+| Args | none |
+
+**Returns:** every approved job, newest first, in the same shape as `getPendingJobs`. This is the moderator's view of live listings in `AdminSection`, and unlike [`jobs.listApprovedJobs`](/docs/api-reference/jobs) it carries no bookmark state and applies no filters.
+
+## `updateJobStatus`
+
+Approves or rejects a submission.
+
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Moderator or admin |
+
+| Arg | Type | Required |
+|---|---|---|
+| `jobId` | `Id<"jobs">` | Yes |
+| `status` | `"approved" \| "rejected"` | Yes |
+
+**Returns:** `{ success: true }`
+
+**Throws:** `Not authenticated`, `Unauthorized`, `Job not found`.
 
 ```typescript
 const updateJobStatus = useMutation(api.admin.updateJobStatus);
-
 await updateJobStatus({ jobId, status: "approved" });
 ```
 
-**Authentication:** Admin or Moderator role required
+Approving flips the job into `listApprovedJobs` immediately — Convex pushes the new result to every subscribed client without a refetch.
 
-**Parameters:**
-- `jobId` - ID of job to update
-- `status` - `"approved"` or `"rejected"`
+### Email triggered on approval
 
-**Returns:** Confirmation object.
+When the previous status was not already `approved` and the new status is `approved`, the mutation schedules `internal.notifications.sendJobApprovedUserEmails` for that job. That action:
 
-### `markJobOutdated`
+- re-reads the job and stops unless it is still `approved`;
+- fetches active subscribers whose `roleFilters` include the job's `roleLevel` (an empty filter list means all role levels);
+- skips any subscriber who already has a `jobNotificationDeliveries` row for this job, and records one after each successful send.
 
-Mark an approved job as outdated.
+Rejecting sends nothing. Re-approving an already-approved job sends nothing, because the guard compares against the previous status. Details in [Email Subscriptions API](/docs/api-reference/email-subscriptions).
 
-```typescript
-const markJobOutdated = useMutation(api.admin.markJobOutdated);
+<Callout type="warn">
+  There is no email to the submitter and no rejection reason field. A rejected job is simply removed from the queue and deleted by the retention cron 14 days after it was created.
+</Callout>
 
-await markJobOutdated({ jobId });
-```
+## `markJobOutdated`
 
-**Authentication:** Admin or Moderator role required
+Closes a listing without destroying anything.
 
-**Parameters:**
-- `jobId` - ID of job to mark outdated
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Moderator or admin |
 
-**Returns:** Confirmation object.
+| Arg | Type | Required |
+|---|---|---|
+| `jobId` | `Id<"jobs">` | Yes |
 
-### `deleteJob`
+**Returns:** `{ success: true }`
 
-Permanently delete a job.
+The job leaves the public list, and anyone tracking it keeps the record: their dashboard card shows `availability: "closed"` with `closureReason: "outdated"`. The retention cron deletes outdated jobs 30 days after their creation time — and applies the same status automatically to approved jobs older than 14 days.
 
-```typescript
-const deleteJob = useMutation(api.admin.deleteJob);
+Sends no email.
 
-await deleteJob({ jobId });
-```
+## `deleteJob`
 
-**Authentication:** Admin or Moderator role required
+Permanently deletes the job document.
 
-**Parameters:**
-- `jobId` - ID of job to delete
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Moderator or admin |
 
-**Returns:** Confirmation object.
+| Arg | Type | Required |
+|---|---|---|
+| `jobId` | `Id<"jobs">` | Yes |
 
-Deleted jobs are removed from listings; tracked applications remain available in user dashboards as closed entries.
+**Returns:** `{ success: true }`
+
+Tracked applications pointing at the job are not deleted; they fall back to their `jobSnapshot` and render as closed with `closureReason: "removed"`. Sends no email.
+
+<Callout type="warn">
+  Unlike the retention cron, this mutation does not clean up the job's `jobNotificationDeliveries` rows, so those delivery receipts are left orphaned. They are harmless (deduplication keys for a job that no longer exists) but they are never reclaimed unless the affected user deletes their account. Prefer `markJobOutdated` for ordinary closures.
+</Callout>
+
+## Where moderation happens
+
+| Surface | Function |
+|---|---|
+| Pending queue and role check on `/dashboard` | `dashboard.getDashboardData` |
+| Approved listings panel | `admin.getApprovedJobs` |
+| Approve / Reject buttons | `admin.updateJobStatus` |
+| Mark outdated | `admin.markJobOutdated` |
+| Delete | `admin.deleteJob` |
+| Staff email when a job is submitted | `internal.notifications.sendNewSubmissionStaffEmail`, scheduled by `jobs.postJob` |

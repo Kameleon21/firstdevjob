@@ -1,31 +1,53 @@
 ---
 title: Browsing Jobs
-description: How to search and filter job listings
+description: Search, filter, and save listings on the job board
 ---
 
-# Browsing Jobs
+Every approved job sits on the home page, newest first. You do not need an account to look. The search box narrows the list by a word or phrase, and two dropdowns narrow it by position level and location. Results update as you type, and the counter next to the heading always shows how many jobs match.
 
-FirstDevJob makes it easy to find relevant job listings for your skill level.
+## Search
 
-## Search & Filters
+Type into **Search jobs, companies, or locations...** at the top of the list. The board waits a moment after you stop typing, then filters.
 
-Use the search bar and filters to narrow down jobs:
+What you type is matched against three things on each job: its **title**, its **company**, and its **location**. A job is kept if your text appears in any one of them. Matching ignores capitals, and matching parts of the card are highlighted so you can see why a job came back.
 
-- **Search** - Find jobs by title, company, or keywords
-- **Position Level** - Filter by intern, graduate, or early career roles
-- **Location** - Filter by posting location values
+<Callout type="warn" title="Search matches one phrase, not separate words">
+Your whole search is treated as a single piece of text, so `react dublin` only matches a job that literally contains "react dublin" in its title, company, or location. Search for `react`, then use the **Location** dropdown to pick Dublin.
+</Callout>
 
-## Job Cards
+## Filters
 
-Each job card displays:
+Below the search box:
 
-- Company name and logo
-- Job title
-- Location and position level
-- Posted date
-- Key tags/technologies
+- **Position Level** — All levels, Intern, Graduate, or Early Career. Everyone posting a job has to pick one of these, so it is the most reliable way to narrow the board.
+- **Location** — All locations, or one entry from the list. The list is built from the locations of the jobs currently on the board, and it matches that exact wording. If one company wrote "Dublin" and another wrote "Dublin, Ireland", those are two separate options.
 
-## Bookmarking Jobs
+Search and both filters stack: you get the jobs that satisfy all of them. A red **Clear filters** button appears under the dropdowns once a filter is set, and a **Clear all filters** link appears beside the results heading once anything at all is set. Either one resets everything, including the search box.
 
-Click the bookmark icon to save jobs for later. Access your bookmarks from the navigation menu.
-Tracked jobs remain visible in your dashboard even after a posting closes or is removed, so you can continue tracking your hiring progress.
+## What a job card shows
+
+- The job title and the company name
+- A badge for the position level: Intern, Graduate, or Early Career
+- The location
+- The date the job was submitted
+- Any technology tags the submitter added
+- **Apply Now**, which opens the company's own posting in a new tab
+
+FirstDevJob never takes your application. Everything past **Apply Now** happens on the employer's site.
+
+## Saving a job
+
+When you are signed in, a bookmark icon appears in the top-right corner of each card. Clicking it saves the job and starts tracking it at the **Saved** status, so it shows up on your [dashboard](/docs/user-guide/tracking-applications) right away. The icon fills in to confirm.
+
+Clicking a filled bookmark again removes the job, but only while nothing has happened to it — still at **Saved**, with no notes written. Once you move it forward or add a note, the bookmark stays put and a **Tracked. Manage in dashboard** link appears underneath. That is deliberate: a stray click should not wipe out notes you wrote. Remove it from the dashboard instead.
+
+If you are signed out there is no bookmark icon at all. See [Getting Started](/docs/user-guide/getting-started) to create an account.
+
+## Limits worth knowing
+
+- **There are no pages.** Every approved job loads at once. Use search and the filters rather than scrolling.
+- **You cannot sort.** The order is always newest first.
+- **Tags are shown, not searchable.** The search box does not look at tags, and there is no tag filter.
+- **Listings expire.** An approved job stays on the board for about 14 days and then drops off as outdated. If you had saved it, it stays in your tracker marked as closed.
+
+If you would rather be told about new jobs than keep checking, turn on [email notifications](/docs/user-guide/email-notifications).

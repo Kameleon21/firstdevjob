@@ -1,56 +1,201 @@
 ---
 title: Database Schema
-description: Convex database tables and relationships
+description: The six Convex tables, their fields, indexes and relationships
 ---
 
-# Database Schema
+The whole schema is one file, `convex/schema.ts`, and Convex enforces it: a field that is not declared cannot be written, and a validator change is applied to the deployment at push time. Six tables cover the product — `profiles`, `jobs`, `tags`, `trackedApplications`, `emailSubscriptions` and `jobNotificationDeliveries`. Convex adds `_id` and `_creationTime` to every document, so no table declares its own id or created-at field.
 
-FirstDevJob uses Convex as its database. The schema is defined in TypeScript.
+<Mermaid
+  title="Tables and their relationships"
+  chart={`
+erDiagram
+  profiles {
+    string userId "Clerk user id"
+    string fullName "optional"
+    string role "user, moderator or admin"
+  }
+  jobs {
+    string title
+    string company
+    string location "optional"
+    string url "optional"
+    string roleLevel "optional"
+    string status "pending, approved, rejected, outdated"
+    array tags "optional, tag names"
+    string submitterUserId "optional, Clerk user id"
+  }
+  tags {
+    string name
+  }
+  trackedApplications {
+    string userId "Clerk user id"
+    id jobId "references jobs"
+    object jobSnapshot "optional"
+    string status "saved to accepted"
+    string notes "optional"
+    array statusHistory "optional"
+  }
+  emailSubscriptions {
+    string userId "Clerk user id"
+    string email
+    string unsubscribeToken
+    boolean isActive
+    array roleFilters
+  }
+  jobNotificationDeliveries {
+    id jobId "references jobs"
+    string userId "Clerk user id"
+    number sentAt
+  }
+  jobs ||--o{ trackedApplications : "jobId"
+  jobs ||--o{ jobNotificationDeliveries : "jobId"
+  profiles ||..o{ trackedApplications : "same userId"
+  profiles ||..|| emailSubscriptions : "same userId"
+  profiles ||..o{ jobNotificationDeliveries : "same userId"
+  jobs }o..o{ tags : "tag names, not ids"
+`}
+/>
 
-## Tables
+<Callout type="info">
+  Only `jobId` is a real Convex reference (`v.id("jobs")`). Every `userId` in this schema is a **Clerk user id string** (`identity.subject`) — it does not point at the `profiles` table, and Convex will not validate or cascade it. That is why `profiles.deleteAccount` has to delete rows from three other tables by hand, and why a `userId` can outlive the profile row it belonged to.
+</Callout>
 
-### jobs
+## profiles
 
-Stores all job listings.
+One row per signed-in user, created by `users.ensureProfile` on first sign-in.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `title` | string | Job title |
-| `company` | string | Company name |
-| `location` | string | Job location |
-| `url` | string | Application link |
-| `roleLevel` | string? | intern, graduate, earlyCareer |
-| `tags` | string[] | Technology tags |
-| `status` | string | pending, approved, rejected, outdated |
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | `string` | Clerk user id. The lookup key for every other query |
+| `fullName` | `string?` | Seeded from the Clerk identity name, editable at `/profile` |
+| `role` | `"user" \| "moderator" \| "admin"` | Required — no default at the schema level |
 
-### trackedApplications
+| Index | Fields | Used by |
+|---|---|---|
+| `by_userId` | `userId` | Every profile, auth and role lookup |
 
-Application tracking data.
+### role drives all moderation
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `userId` | string | User ID |
-| `jobId` | Id\<"jobs"\> | Reference to job |
-| `jobSnapshot` | object? | Cached job data used when source job is removed |
-| `status` | string | saved, applied, interviewing, offer, rejected, accepted |
-| `notes` | string? | User notes |
-| `_creationTime` | number | Created timestamp (Convex-managed) |
+`role` is the only authorization input in the backend. `requireModOrAdmin` in `convex/admin.ts` loads this row and rejects anything that is not `moderator` or `admin`, which gates the entire [Admin API](/docs/api-reference/admin); `dashboard.getDashboardData` reads the same field to decide whether to return the pending queue at all. No function writes `role`, so promotion is a manual edit of this row in the Convex dashboard, and `users.ensureProfile` hard-codes `"user"` for new rows.
 
-### profiles
+A user with no `profiles` row is treated as signed out for authorization purposes — `checkUserRole` returns all-false flags and `requireModOrAdmin` throws `Unauthorized`.
 
-User profile information.
+## jobs
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `userId` | string | Clerk user ID |
-| `displayName` | string? | Display name |
-| `bio` | string? | User bio |
-| `links` | object? | Social links |
+Every submission, at every stage of its life.
 
-## Indexes
+| Field | Type | Notes |
+|---|---|---|
+| `title` | `string` | Validated to 120 characters, no control characters |
+| `company` | `string` | Same validation |
+| `location` | `string?` | Optional in the schema; required by `jobs.postJob` |
+| `url` | `string?` | Optional in the schema; required and normalized by `jobs.postJob` |
+| `roleLevel` | `"intern" \| "graduate" \| "earlyCareer"` (optional) | Filters the list and the notification emails |
+| `status` | `"pending" \| "approved" \| "rejected" \| "outdated"` | Required |
+| `tags` | `string[]?` | Tag names, denormalized onto the job |
+| `submitterUserId` | `string?` | Clerk id of the submitter; absent on seeded rows |
 
-Key indexes for query performance:
+| Index | Fields | Used by |
+|---|---|---|
+| `by_status` | `status` | Public listing, moderation queues, retention cron |
+| `by_submitterUserId` | `submitterUserId` | Per-user submission rate limiting |
+| `by_status_roleLevel` | `status`, `roleLevel` | Listing filtered by role level |
+| `by_status_location` | `status`, `location` | Listing filtered by location |
+| `by_status_roleLevel_location` | `status`, `roleLevel`, `location` | Listing filtered by both |
 
-- `jobs.by_status` - Filter jobs by approval status
-- `trackedApplications.by_userId` - Get user's tracked applications
-- `trackedApplications.by_userId_jobId` - Unique tracking per user/job
+Convex appends `_creationTime` to every index, which is what lets the retention cron range-scan `by_status` with `q.eq("status", ...).lt("_creationTime", cutoff)` instead of reading the table.
+
+The status values are a lifecycle, not flags: `pending` on submission, `approved` by a moderator (the only state the public list reads), `rejected` by a moderator, and `outdated` either manually or automatically 14 days after creation. See [Jobs API](/docs/api-reference/jobs) for the retention rules.
+
+## tags
+
+The tag vocabulary shown in the filter UI.
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | `string` | Tag name as first submitted |
+
+| Index | Fields | Used by |
+|---|---|---|
+| `by_name` | `name` | Existence check before inserting a new tag |
+
+There is no join table. `jobs.tags` stores tag names directly, and `jobs.postJob` inserts any name it has not seen before so the vocabulary grows from real submissions. `tags.getAllTags` returns the sorted names. Rows are never deleted, so a tag can outlive the last job that used it.
+
+## trackedApplications
+
+One row per user per saved job — this single table is both "bookmarks" and "application tracking".
+
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | `string` | Clerk user id |
+| `jobId` | `Id<"jobs">` | Reference to the job |
+| `jobSnapshot` | `object?` | Copy of the job at save time (see below) |
+| `status` | `"saved" \| "applied" \| "interviewing" \| "offer" \| "rejected" \| "accepted"` | Starts at `saved` |
+| `notes` | `string?` | Trimmed, max 2000 characters |
+| `statusHistory` | `array?` | Append-only trail (see below) |
+
+| Index | Fields | Used by |
+|---|---|---|
+| `by_userId` | `userId` | Dashboard list, account deletion |
+| `by_userId_jobId` | `userId`, `jobId` | Toggle and "is this bookmarked" lookups |
+
+`by_userId_jobId` is read with `.unique()`, which throws if two rows ever match. Convex has no unique constraints, so uniqueness is maintained by `toggleBookmark` always checking that index before inserting.
+
+### What `jobSnapshot` is for
+
+A dashboard must not lose an application because the listing was taken down. `jobSnapshot` caches `title`, `company`, `location`, `url`, `createdAt` (the job's original `_creationTime`) `tags` and `roleLevel` when the bookmark is created, so a tracked application still renders in full after the job document is deleted by a moderator or the retention cron. The card is then marked `availability: "closed"` with `closureReason: "removed"` — as opposed to `"outdated"`, which means the job still exists but is closed.
+
+It is optional because rows created before snapshots existed do not have one; `bookmarks.backfillTrackedApplicationSnapshots` fills those in where the job still exists. A row with neither a live job nor a snapshot is skipped by the dashboard queries.
+
+### What `statusHistory` is for
+
+An append-only audit trail of status changes: `{ fromStatus?, toStatus, changedAt }`. The first entry is written on creation with `toStatus: "saved"` and no `fromStatus`; after that `updateBookmarkStatus` appends one entry per actual change, and notes-only edits (status unchanged) append nothing.
+
+<Callout type="info">
+  Nothing reads `statusHistory` yet — no query returns it and no component renders it. It is recorded now so the data exists when a timeline or analytics view is built. Allowed transitions are enforced separately by `allowedStatusTransitions`; the history is a record, not the rule.
+</Callout>
+
+## emailSubscriptions
+
+At most one row per user, managed at `/profile`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `userId` | `string` | Clerk user id |
+| `email` | `string` | Taken from the Clerk identity, never from client input |
+| `unsubscribeToken` | `string` | `crypto.randomUUID()`, stable for the life of the row |
+| `isActive` | `boolean` | Unsubscribing flips this to `false`, it does not delete the row |
+| `roleFilters` | `("intern" \| "graduate" \| "earlyCareer")[]` | Empty array means every role level |
+
+| Index | Fields | Used by |
+|---|---|---|
+| `by_userId` | `userId` | Profile settings, account deletion |
+| `by_unsubscribeToken` | `unsubscribeToken` | One-click unsubscribe at `/unsubscribe` |
+| `by_isActive` | `isActive` | Fan-out when a job is approved |
+
+The token is preserved when a user re-subscribes, so unsubscribe links already sitting in inboxes keep working.
+
+## jobNotificationDeliveries
+
+A receipt per email sent, and the reason nobody gets told about the same job twice.
+
+| Field | Type | Notes |
+|---|---|---|
+| `jobId` | `Id<"jobs">` | The job that was announced |
+| `userId` | `string` | Clerk user id of the recipient |
+| `sentAt` | `number` | Epoch ms, written after a successful send |
+
+| Index | Fields | Used by |
+|---|---|---|
+| `by_jobId_userId` | `jobId`, `userId` | Deduplication check before sending; cleanup when the cron deletes a job |
+| `by_userId` | `userId` | Account deletion — removes a user's delivery history in one scan |
+
+Rows are written only after the send succeeds, so a failed send is retried the next time the action runs for that job. They are deleted when the retention cron deletes a job and when a user deletes their account; `admin.deleteJob` does not delete them.
+
+## Working with the schema
+
+- Edit `convex/schema.ts`; `bunx convex dev` pushes the change and regenerates `convex/_generated/`.
+- Adding a required field to a table that already has rows will fail the push — add it as `v.optional(...)`, backfill with an `internalMutation`, then tighten it.
+- Dev and prod are separate deployments with separate data. `bun run sync:prod-to-dev` copies prod data over your dev deployment; see the warning in [Deployment](/docs/technical/deployment).
+
+The functions that read and write each table are documented in the [API Reference](/docs/api-reference/jobs).

@@ -1,39 +1,92 @@
 ---
 title: Email Notifications
-description: Get notified when new jobs matching your preferences are posted
+description: Get an email when a new job matching your level is approved
 ---
 
-# Email Notifications
+import { Steps, Step } from 'fumadocs-ui/components/steps';
 
-Never miss a new job posting. Opt in to email notifications and we'll alert you whenever new approved jobs match your role preferences.
+A listing only stays on the board for about two weeks, so refreshing the home page is a poor way to catch a new one. Turn on notifications instead and you get one email each time a moderator approves a job at a level you care about. It is off until you switch it on, and every email carries a link to switch it off again.
 
-## How to Enable
+## Turn notifications on
 
-1. Sign in and navigate to your **Profile** page
-2. Select the **Notifications** tab
-3. Toggle **Email Notifications** on
+<Steps>
 
-That's it — you'll start receiving emails for newly approved jobs.
+<Step>
 
-## Role Filters
+**Sign in** and open your profile from the icon in the header, or go to `/profile`.
 
-After enabling notifications, you can filter by role level:
+</Step>
 
-- **Intern** — internship and placement roles
-- **Graduate** — graduate-level positions
-- **Early Career** — junior roles for developers with some experience
+<Step>
 
-Select one or more filters to only receive notifications for those role types. If you leave all filters unchecked, you'll be notified about all new jobs.
+**Open the Notifications tab.**
 
-## How to Unsubscribe
+</Step>
 
-You can stop receiving notifications in two ways:
+<Step>
 
-1. **From your profile** — go to Profile > Notifications and toggle off
-2. **From any email** — click the **unsubscribe** link at the bottom of any notification email
+**Switch on Enable notifications.** A message confirms that job email notifications are enabled.
 
-## Tips
+</Step>
 
-- Combine role filters to match exactly what you're looking for
-- Check your spam folder if you've enabled notifications but aren't receiving emails
-- You can toggle notifications on and off at any time without losing your filter preferences
+<Step>
+
+**Choose your role filters.** Three buttons appear — Intern, Graduate, Early Career. Click the ones you want; each click saves straight away. Leave all three off to hear about every job.
+
+</Step>
+
+</Steps>
+
+Emails go to the address on your account. If your account has no email address on it, the toggle reports an error rather than switching on.
+
+## What you get
+
+<Mermaid
+  title="From an approved job to your inbox"
+  chart={`
+flowchart TD
+  approved["A moderator approves a job"] --> match["Subscribers whose filters match its level"]
+  match --> email["One email to each of them"]
+  email --> once["Never the same job twice"]
+  email --> unsub["Every email carries an unsubscribe link"]
+  unsub --> confirm["Confirm on the unsubscribe page to stop"]
+`}
+/>
+
+One job means one email — there is no daily or weekly digest, and no batching. Each message has a subject line in the form `New approved job: Job Title at Company`, and contains the title, company, location, position level, a link to apply, a link back to the board, and an unsubscribe link.
+
+You are never emailed about the same job twice, even if it is approved again after being taken down.
+
+<Callout type="info" title="These are no-reply emails">
+Replies do not reach anyone who can act on them. Manage everything from your profile or the unsubscribe link.
+</Callout>
+
+## What the filters do
+
+Your filters are matched against the job's position level, the one the person who posted it chose.
+
+- **No filters selected** — you are emailed about every approved job.
+- **One or more selected** — you are emailed only about jobs at those levels.
+
+Filters are saved as soon as you click them, so there is no separate save button. They are only shown, and only editable, while notifications are switched on.
+
+## Turn notifications off
+
+Two ways, and both stop every job email:
+
+- **In your profile** — Notifications tab, switch **Enable notifications** off. Your role filters are remembered, so switching back on later keeps them.
+- **From any email** — click the unsubscribe link. It opens a page on the site with a **Confirm Unsubscribe** button, and nothing happens until you click it. One stray click in an email client cannot unsubscribe you by accident.
+
+<Callout type="warn" title="Old unsubscribe links keep working">
+Your unsubscribe link stays the same even after you switch notifications off and back on. An unsubscribe link in an email from months ago will still switch you off today, so re-enable from your profile rather than assuming a stale link is dead.
+</Callout>
+
+If the unsubscribe page says the link is invalid or expired, the link was damaged in transit — some mail clients break long URLs. Sign in and use the profile toggle instead.
+
+## Limits worth knowing
+
+- **Only new approvals count.** Jobs already on the board when you subscribe do not generate an email. Go and [browse them](/docs/user-guide/browsing-jobs).
+- **Position level is the only filter.** There is no filter for location, company, or technology tags.
+- **Notifications are separate from your tracker.** Nothing is emailed about jobs you have [saved or applied to](/docs/user-guide/tracking-applications), and nothing about the status of a job you submitted.
+- **Not receiving anything?** Check your spam folder, confirm the toggle is still on, and confirm your filters are not narrower than you meant. No jobs at your chosen levels having been approved yet also looks exactly like this.
+- **Deleting your account** removes your subscription along with everything else.

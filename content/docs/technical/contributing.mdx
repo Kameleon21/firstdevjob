@@ -1,78 +1,172 @@
 ---
 title: Contributing
-description: How to contribute to FirstDevJob
+description: Local setup, the scripts that matter, and what CI will check
 ---
 
-# Contributing
+FirstDevJob is a Next.js frontend and a Convex backend in one repository, with Jest tests and two GitHub Actions workflows. Getting productive means running two dev processes side by side and knowing the five commands CI will run against your branch.
 
-We welcome contributions to FirstDevJob! Here's how to get started.
+<Callout type="warn">
+  The package manager is **Bun**, pinned to `bun@1.4.2` in `package.json` and in both workflows. Use `bun` and `bunx`; do not use `npm`, `npx`, `yarn` or `pnpm` — a different lockfile will fail `bun install --frozen-lockfile` in CI.
+</Callout>
 
-## Development Setup
+## Local setup
 
-### 1. Clone the repository
+### 1. Install
 
 ```bash
-git clone https://github.com/your-org/firstdevjob.git
+git clone https://github.com/<owner>/firstdevjob.git
 cd firstdevjob
-```
-
-### 2. Install dependencies
-
-```bash
 bun install
 ```
 
-### 3. Set up environment
+`postinstall` runs `fumadocs-mdx`, which generates the `.source` directory the docs pages import. If `/docs` fails to resolve its content, re-run `bun install` or `bunx fumadocs-mdx`.
 
-Copy `.env.example` to `.env.local` and fill in the values.
-
-### 4. Start development servers
+### 2. Configure environment
 
 ```bash
-# Terminal 1: Next.js dev server
-bun run dev
+cp .env.example .env.local
+```
 
-# Terminal 2: Convex dev server
+`.env.example` lists every variable name the app reads. You need a Clerk application (publishable key, secret key, and a JWT template named `convex`) and a Convex project. Convex-side values such as `CLERK_JWT_ISSUER_DOMAIN` are not read from `.env.local` — they belong to the Convex deployment:
+
+```bash
+bunx convex env set CLERK_JWT_ISSUER_DOMAIN https://your-issuer.clerk.accounts.dev
+```
+
+`CLERK_JWT_ISSUER_DOMAIN` is the issuer domain only, never the JWKS URL. Email variables can be left unset locally: `convex/resend.ts` defaults to test mode, and the notification actions log and return a reason instead of failing when `EMAIL_FROM` is missing.
+
+### 3. Run both processes
+
+```bash
+# Terminal 1 — Convex: pushes functions and schema on save, writes
+# CONVEX_DEPLOYMENT and NEXT_PUBLIC_CONVEX_URL into .env.local on first run
 bunx convex dev
+
+# Terminal 2 — Next.js
+bun run dev
 ```
 
-## Making Changes
+Keep `bunx convex dev` running while you work on anything in `convex/`: it regenerates `convex/_generated/` and type errors in the app will otherwise be stale.
 
-### 1. Create a branch
+Optionally seed the tag vocabulary by running the internal mutation `seed.seedTags` from the Convex dashboard.
+
+## Scripts
+
+| Script | What it does |
+|---|---|
+| `bun run dev` | Next.js dev server with Turbopack |
+| `bun run build` | Production build |
+| `bun run start` | Serve the production build |
+| `bun run lint` | ESLint over the repo (`eslint .`) |
+| `bun run lint:fix` | ESLint with `--fix` |
+| `bun run format` / `format:check` | Prettier write / check |
+| `bun run test` | Jest, one pass |
+| `bun run test:watch` | Jest in watch mode |
+| `bun run test:coverage` | Jest with coverage, enforces the thresholds |
+| `bun run test:ci` | What CI runs: `jest --ci --coverage --watchAll=false` |
+| `bun run audit:deps` | `bun audit` at high severity with three known advisories ignored |
+| `bun run analyze` | Production build with the bundle analyzer |
+| `bun run sync:prod-to-dev` | Destructive data copy — see [Deployment](/docs/technical/deployment) |
+
+<Callout type="error">
+  Do not use `bun run type-check` in a pre-push check or in a script: it is `tsc --noEmit --watch` and never exits. For a one-shot type check run `bunx tsc --noEmit`, which is what both workflows use.
+</Callout>
+
+## Before you push
+
+Run the same five checks CI runs, in this order:
 
 ```bash
-git checkout -b feature/your-feature-name
+bun run lint           # ESLint
+bunx tsc --noEmit      # TypeScript, one pass
+bun run test:coverage  # Jest with coverage thresholds
+bun run build          # Build verification
+bun run audit:deps     # Dependency audit, high severity and above
 ```
 
-### 2. Make your changes
+Fix every failure before pushing. A red `Master` blocks the production deploy for everyone, because `deploy.yml` runs the same suite before it will push Convex functions.
 
-- Follow existing code style
-- Add tests for new functionality
-- Update documentation if needed
+## What CI checks
 
-### 3. Test your changes
+One workflow, `.github/workflows/ci.yml`, runs on every pull request and every push to `Master`, with four jobs:
 
-```bash
-bun run lint
-bun run type-check
-bun run test
+| Job | Contents |
+|---|---|
+| `quality` | `bun run lint`, `bun x tsc --noEmit`, `bun run test:ci`, Codecov upload (non-blocking) |
+| `build` | `bun run build` with the public Convex and Clerk variables |
+| `security` | `bun run audit:deps` |
+| `dependency-review` | Pull requests only; fails on high-severity dependency changes |
+
+Runs are grouped per PR with `cancel-in-progress`, so pushing a new commit cancels the previous run. `.github/workflows/deploy.yml` is the production pipeline and is described in [Deployment](/docs/technical/deployment).
+
+## Tests
+
+Jest with `ts-jest` and the `jsdom` environment; configuration is in `jest.config.js`, setup in `tests/setup/jest.setup.ts`.
+
+```text
+tests/
+├── components/   # React Testing Library tests for src/components
+├── convex/       # Pure backend logic: applicationIntegrity, jobSubmissionSecurity
+├── lib/          # postJobError, textHighlight
+├── setup/        # Global setup and matchers
+├── utils/        # Render helpers
+└── mocks/        # Static asset stub
 ```
 
-### 4. Submit a PR
+Name files `*.test.ts` / `*.test.tsx` under `tests/`. Coverage is collected from `src/**` (excluding layouts, loading, error, not-found, `src/proxy.ts` and type declarations) and enforced globally:
 
-- Write a clear PR description
-- Reference any related issues
-- Wait for review
+| Metric | Threshold |
+|---|---|
+| Branches | 36% |
+| Functions | 28% |
+| Lines | 33% |
+| Statements | 33% |
 
-## Code Style
+`bun run test:coverage` fails if any metric drops below its threshold, so deleting tests is as likely to break the build as adding untested code. These numbers are intentionally a floor to ratchet upwards, not a target.
 
-- TypeScript for all code
-- Functional components with hooks
-- Tailwind for styling
-- Convex for backend logic
+Backend logic that can be unit tested lives in plain modules for exactly this reason — `convex/applicationIntegrity.ts` and `convex/jobSubmissionSecurity.ts` export pure functions with no Convex context, and are tested directly. When you add a backend rule, put the rule in a pure helper and call it from the query or mutation.
 
-## Getting Help
+## Making a change
 
-- Open an issue for bugs or feature requests
-- Join discussions for questions
-- Check existing issues before creating new ones
+1. Branch from `Master`.
+2. Keep the change small and focused; match the surrounding code rather than introducing a new pattern.
+3. Add or update tests for anything with logic in it.
+4. Update the docs in `content/docs/` when behaviour, arguments or limits change.
+5. Run the five pre-push checks.
+6. Open a pull request describing what changed and why, and link any related issue.
+
+### Code conventions
+
+- TypeScript everywhere; no `any` escapes past ESLint.
+- Function components with hooks; client components marked `"use client"`.
+- Tailwind CSS v4 with the CSS variables defined in `globals.css` — no inline style objects for themable values.
+- Import app code through the `@/` alias; import Convex through `convex/_generated/api`.
+- Validate arguments with Convex validators (`v.*`) and check auth with `requireAuth` or `requireModOrAdmin` at the top of the handler.
+- Never commit secrets. `.env.local` is git-ignored and stays that way.
+
+### Contributing to these docs
+
+Documentation is MDX in `content/docs/`, rendered by Fumadocs.
+
+- Add a file, then list its slug in that directory's `meta.json` — a slug with no file is a broken sidebar link, and a file with no slug is invisible.
+- Frontmatter `title` and `description` are rendered as the page heading by the template. Do not repeat the title as an H1 in the body; start with a summary paragraph and use H2 for sections.
+- `Callout`, `Card` and `Cards` are available without an import, along with a `Mermaid` component for diagrams:
+
+```mdx
+<Mermaid
+  title="What the diagram shows"
+  chart={`
+flowchart TD
+  a["Step one"] --> b["Step two"]
+`}
+/>
+```
+
+Quote any label containing punctuation, and do not put backticks or HTML line breaks inside the chart.
+
+- Link between pages with absolute `/docs/...` URLs.
+- Check names, arguments and limits against the source before writing them down. Every function, field, index and limit in the [API Reference](/docs/api-reference/jobs) and [Database Schema](/docs/technical/database-schema) is meant to be verifiable against `convex/`.
+
+## Getting help
+
+Open an issue for bugs and feature requests, and check the existing issues first. For how the pieces fit together, start with [Project Structure](/docs/technical/project-structure) and the [Architecture](/docs/architecture/overview) section.

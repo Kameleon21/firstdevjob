@@ -57,3 +57,45 @@
   color: var(--color-fd-muted-foreground) !important;
   opacity: 0.7;
 }
+
+/* Sidebar collapse (Cmd+B / collapse button): slide in and out like a dock
+   instead of Fumadocs' default morph into a floating panel. The content grid
+   follows on the same curve so the page reflows with the panel. */
+@media (min-width: 768px) {
+  #nd-sidebar {
+    translate: 0 0;
+    transition:
+      translate 320ms cubic-bezier(0.32, 0.72, 0, 1),
+      box-shadow 320ms ease,
+      background-color 200ms ease !important;
+  }
+
+  #nd-sidebar[data-collapsed="true"] {
+    inset-block: 0 !important;
+    border-radius: 0 !important;
+    translate: calc(-1 * var(--fd-sidebar-width)) 0 !important;
+  }
+
+  /* Hovering the left edge while collapsed peeks the panel back in. */
+  #nd-sidebar[data-collapsed="true"][data-hovered="true"] {
+    translate: 0 0 !important;
+    box-shadow: 0 12px 40px -12px rgb(0 0 0 / 0.45);
+  }
+
+  #nd-docs-layout {
+    transition: grid-template-columns 320ms cubic-bezier(0.32, 0.72, 0, 1) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #nd-sidebar,
+  #nd-docs-layout {
+    transition: none !important;
+  }
+}
+
+/* Diagrams: give the SVG the full content width. */
+.mermaid-diagram > svg {
+  width: 100%;
+  height: auto;
+}

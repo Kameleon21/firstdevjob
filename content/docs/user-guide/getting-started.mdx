@@ -1,27 +1,95 @@
 ---
 title: Getting Started
-description: Create your account and start finding your first dev job
+description: Create an account, sign in, and set up your profile
 ---
 
-# Getting Started
+import { Steps, Step } from 'fumadocs-ui/components/steps';
 
-Welcome to FirstDevJob! This guide will help you get set up and start your job search.
+FirstDevJob is a free job board for interns, graduates, and early-career developers. You can browse and search every listing without an account. Signing in adds the parts that are tied to you: saving jobs into an application tracker, getting an email when a matching job is approved, and posting a job of your own.
 
-## Creating an Account
+## What you can do without an account
 
-1. Click the **Sign Up** button in the header
-2. Choose to sign up with GitHub, Google, or email
-3. Complete your profile information
+- Browse every approved job on the home page.
+- Search and filter by position level and location.
+- Open any listing with **Apply Now**, which takes you to the company's own application page.
 
-## Exploring Jobs
+The bookmark icon on a job card only appears once you are signed in, and **Post Job** opens the sign-in window instead of the form.
 
-Once signed in, you can:
+## Create an account
 
-- Browse the job listings on the homepage
-- Bookmark jobs you're interested in
-- Track your application progress
+<Steps>
 
-## Next Steps
+<Step>
 
-- [Browse Jobs](/docs/user-guide/browsing-jobs) - Learn how to search and filter
-- [Track Applications](/docs/user-guide/tracking-applications) - Keep tabs on your progress
+**Open the sign-in window.** Click **Sign In** in the header, or **Sign Up to Track** on the home page. Both open the same window, which has a **Sign In** tab and a **Sign Up** tab.
+
+</Step>
+
+<Step>
+
+**Pick how you want to sign up.** You can use **Continue with GitHub**, **Continue with Google**, or an email address and password. The social buttons send you to that provider and bring you straight back signed in.
+
+</Step>
+
+<Step>
+
+**If you chose email**, switch to the **Sign Up** tab and fill in your first name, last name, email, and a password of at least 8 characters, then confirm the password.
+
+</Step>
+
+<Step>
+
+**Enter the verification code.** We email you a 6-digit code. Type it into the box and click **Verify Email**. You are signed in as soon as it is accepted.
+
+</Step>
+
+</Steps>
+
+<Callout type="warn" title="Use the same method every time">
+An account created with Google or GitHub does not have a password on this site. If you sign up with a social button, keep using that button — the email and password form will not let you in.
+</Callout>
+
+## Sign in later
+
+Click **Sign In** in the header for the quick window, which offers GitHub, Google, and email plus password.
+
+There is also a full sign-in page at [/auth/login](/auth/login). You land there automatically if you open the dashboard or your profile while signed out, and you are returned to the page you wanted once you are in. That page includes the **Forgot password?** link, so use it if you need to reset an email-and-password login — the quick window does not have one.
+
+## After you sign in
+
+The header changes: it greets you by name and adds a **Dashboard** link and a profile icon. From there you can:
+
+- Save jobs and track them — see [Tracking Applications](/docs/user-guide/tracking-applications).
+- Turn on job alerts — see [Email Notifications](/docs/user-guide/email-notifications).
+- Share a role you have found — see [Posting Jobs](/docs/user-guide/posting-jobs).
+
+## Your profile
+
+Open the profile icon in the header, or go to `/profile`. There are three tabs.
+
+| Tab | What it holds |
+| --- | --- |
+| Profile | Your display name and email, and an **Edit Profile** button for changing the name |
+| Security | Change password, and the delete-account button |
+| Notifications | The job alert toggle and role filters |
+
+Your name is filled in from whatever your sign-up method gave us, so it may be blank if that provider did not share one. Set it under **Profile → Edit Profile**.
+
+<Callout title="Changing your password">
+**Security → Change Password** asks for your current password first. It only works for accounts created with email and password. If you signed up with Google or GitHub, change your password with that provider instead.
+</Callout>
+
+## Light and dark mode
+
+The sun and moon button in the header switches the site between light and dark. Until you pick one it follows your device setting; once you pick, the choice is remembered in that browser. You do not need an account for this.
+
+## Delete your account
+
+Go to **Profile → Security → Delete Account**, then confirm in the dialog. This cannot be undone. Deleting removes:
+
+- every tracked application and the notes you wrote on them
+- your email notification subscription and the record of which alerts were sent to you
+- your profile record on the site
+- your login account itself
+
+Jobs you submitted are not deleted. They stay on the board and follow the normal review and expiry rules described in [Posting Jobs](/docs/user-guide/posting-jobs).

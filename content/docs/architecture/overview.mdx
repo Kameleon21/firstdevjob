@@ -1,56 +1,103 @@
 ---
 title: Architecture Overview
-description: System architecture and design decisions
+description: How the Next.js frontend, Convex backend, Clerk auth and Resend email fit together
 ---
 
-# Architecture Overview
+FirstDevJob is a Next.js 16 App Router frontend deployed on Vercel, backed by a Convex deployment that holds every table, query, mutation, scheduled action and cron job. Clerk handles sign-in and issues the JWT that Convex verifies on each request. Transactional email is sent from inside Convex through the `@convex-dev/resend` component. There is no separate API server: the browser talks to Convex directly over a WebSocket, and Next.js serves pages, the docs site and one search route.
 
-FirstDevJob is built with a modern, serverless architecture optimized for real-time updates and developer experience.
+## System diagram
 
-## System Diagram
+<Mermaid
+  title="Runtime request paths and how each half of the app is deployed"
+  chart={`
+flowchart TD
+  subgraph Delivery["Delivery: every push to Master"]
+    direction LR
+    GH["Push to Master"] -->|"deploy.yml"| GA["GitHub Actions"]
+    GH -->|"Git integration"| VG["Vercel build"]
+  end
+  subgraph Runtime["Runtime"]
+    direction TB
+    B["Browser"]
+    APP["Next.js app on Vercel"]
+    CLK["Clerk"]
+    CX["Convex deployment"]
+    RS["Resend"]
+  end
+  GA -->|"bunx convex deploy"| CX
+  VG -->|"next build and deploy"| APP
+  B -->|"HTTP page loads"| APP
+  B -->|"sign in"| CLK
+  CLK -->|"session JWT"| B
+  B -->|"queries and mutations over WebSocket"| CX
+  CX -->|"verifies JWT via CLERK_JWT_ISSUER_DOMAIN"| CLK
+  CX -->|"@convex-dev/resend component"| RS
+  RS -->|"staff and subscriber email"| B
+`}
+/>
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         Client                              │
-│  ┌─────────────────┐    ┌─────────────────┐                │
-│  │   Next.js App   │───▶│ React Components │                │
-│  └─────────────────┘    └─────────────────┘                │
-└─────────────────────────────────────────────────────────────┘
-              │                      │
-              ▼                      ▼
-┌─────────────────────┐    ┌─────────────────────┐
-│       Clerk         │    │       Convex        │
-│   Authentication    │◀──▶│   Backend + DB      │
-└─────────────────────┘    └─────────────────────┘
-```
+The frontend never proxies Convex calls. `ConvexProviderWithClerk` (in `src/components/ConvexClientProvider.tsx`) wires the Clerk session into the Convex client, so every query and mutation carries the user's JWT and `ctx.auth.getUserIdentity()` resolves on the backend.
 
-## Key Components
+## What runs where
 
-### Frontend (Next.js)
+| Concern | Where it lives | Source |
+|---|---|---|
+| Pages, routing, rendering | Next.js App Router on Vercel | `src/app/` |
+| Data, business logic, authorization | Convex functions | `convex/` |
+| Identity, sessions, OAuth | Clerk | `src/app/layout.tsx`, `src/proxy.ts` |
+| Email delivery | Resend, called from Convex actions | `convex/resend.ts`, `convex/notifications.ts` |
+| Scheduled cleanup | Convex cron | `convex/crons.ts` |
+| Documentation site | Fumadocs, MDX in the repo | `content/docs/`, `src/app/docs/` |
 
-- Server-side rendering for SEO
-- React components with TypeScript
-- Tailwind CSS for styling
-- Real-time data subscriptions
+## Frontend routes
 
-### Authentication (Clerk)
+| Route | File | Notes |
+|---|---|---|
+| `/` | `src/app/page.tsx` → `PageWrapper` | Public job list, search and filters |
+| `/dashboard` | `src/app/dashboard/page.tsx` | Client component; pushes to `/auth/login?redirect_url=%2Fdashboard` when signed out. Also hosts the moderation panel |
+| `/profile` | `src/app/profile/page.tsx` | Server component; calls Clerk `auth()` and redirects when there is no `userId` |
+| `/auth/login/[[...rest]]` | Clerk `<SignIn routing="path">` | Catch-all so Clerk can own its sub-routes |
+| `/auth/sso-callback` | `<AuthenticateWithRedirectCallback />` | OAuth return target |
+| `/unsubscribe` | `src/app/unsubscribe/page.tsx` | Token-based, works signed out |
+| `/feedback`, `/privacy` | static pages | `/feedback` links out to `NEXT_PUBLIC_FEEDBACK_BOARD_URL` when set |
+| `/docs/[[...slug]]` | Fumadocs page | This site |
+| `/api/search` | `src/app/api/search/route.ts` | Fumadocs search index, `GET` only |
 
-- OAuth providers GitHub
-- Email/password authentication
-- Session management
-- User profile management
+There is no `/admin` route. Moderation lives in `AdminSection`, rendered on `/dashboard` and returning `null` for anyone who is not a moderator or admin. See [Authentication](/docs/architecture/authentication) for what actually enforces that.
 
-### Backend (Convex)
+## Backend modules
 
-- Real-time database with subscriptions
-- Type-safe queries and mutations
-- Automatic caching and optimization
-- Cron jobs for scheduled tasks
+| Module | Responsibility |
+|---|---|
+| `convex/schema.ts` | Six tables: `profiles`, `jobs`, `tags`, `trackedApplications`, `emailSubscriptions`, `jobNotificationDeliveries` |
+| `convex/jobs.ts` | Public job listing and filtering, `postJob` with rate limits, the `deleteOldJobs` cron handler |
+| `convex/admin.ts` | Moderation queries and mutations, all behind `requireModOrAdmin` |
+| `convex/bookmarks.ts` | Tracked applications: bookmark toggle, status changes, notes |
+| `convex/dashboard.ts` | One query that hydrates the whole dashboard in a single round trip |
+| `convex/profiles.ts`, `convex/users.ts` | Profile read/update, first-sign-in profile creation, account deletion |
+| `convex/emailSubscriptions.ts` | Opt-in, role filters, unsubscribe by token |
+| `convex/notifications.ts`, `convex/resend.ts` | Staff and subscriber emails, Resend component setup |
+| `convex/applicationIntegrity.ts`, `convex/jobSubmissionSecurity.ts`, `convex/jobHelpers.ts` | Pure helpers: status transition rules, submission validation, role-level inference and job snapshots |
 
-## Data Flow
+`applicationIntegrity.ts`, `jobSubmissionSecurity.ts` and `jobHelpers.ts` export plain functions rather than Convex functions, which is what makes them directly unit-testable.
 
-1. User interacts with React component
-2. Component calls Convex query/mutation
-3. Convex validates request and checks auth
-4. Database operation executes
-5. Real-time update pushed to all clients
+## Real-time and scheduled work
+
+Convex queries are subscriptions. When a moderator approves a job, every browser holding a `listApprovedJobs` subscription receives the new result without polling — see [Data Flow](/docs/architecture/data-flow).
+
+Two things run outside a user request:
+
+- `internal.jobs.deleteOldJobs`, scheduled daily at 00:00 UTC by `convex/crons.ts`, ages jobs out of the listing.
+- `internal.notifications.sendJobApprovedUserEmails` and `internal.notifications.sendNewSubmissionStaffEmail`, scheduled with `ctx.scheduler.runAfter(0, ...)` from `updateJobStatus` and `postJob` respectively. Scheduling them instead of awaiting them keeps the mutation transactional and fast.
+
+<Callout type="warn">
+Convex dev and prod are separate deployments with separate environment variables. Setting `EMAIL_FROM`, `RESEND_API_KEY`, `STAFF_NOTIFICATION_EMAILS` or `NEXT_PUBLIC_SITE_URL` in dev does nothing for prod — set prod values with `bunx convex env set NAME value --prod` or in the prod deployment's dashboard. Notification actions log a warning and return `success: false` when a variable they need is missing, so a misconfigured prod deployment fails quietly.
+</Callout>
+
+## Deployment
+
+`.github/workflows/deploy.yml` runs on pushes to `Master`: lint, type check, tests and a build, then `bunx convex deploy`. The workflow's Vercel job is gated behind the repository variable `VERCEL_CONFIGURED`, so in practice the frontend ships through the Vercel Git integration. Full details in [Deployment](/docs/technical/deployment).
+
+<Callout type="info">
+`NEXT_PUBLIC_*` variables are inlined into the JavaScript bundle at build time. Changing `NEXT_PUBLIC_CONVEX_URL` or `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` requires a fresh build, not just a redeploy of the existing one.
+</Callout>

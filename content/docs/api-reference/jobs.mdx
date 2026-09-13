@@ -1,17 +1,41 @@
 ---
 title: Jobs API
-description: Convex functions for job listings
+description: Convex functions for listing, filtering and submitting job postings
 ---
 
-# Jobs API
+Everything a job posting does — being listed, being submitted, aging out — is in `convex/jobs.ts`, with submission validation split into `convex/jobSubmissionSecurity.ts` and role-level inference into `convex/jobHelpers.ts`. Two rules shape the whole module: the public list only ever contains jobs whose `status` is `approved`, and everything a user submits starts at `pending` and stays invisible until a moderator approves it through the [Admin API](/docs/api-reference/admin).
 
-Functions for managing job listings.
+## `listApprovedJobs`
 
-## Queries
+The query behind the home page listing.
 
-### `listApprovedJobs`
+| | |
+|---|---|
+| Kind | `query` |
+| Auth | Anonymous allowed |
 
-Get all approved job listings.
+| Arg | Type | Required | Behaviour |
+|---|---|---|---|
+| `searchTerm` | `string` | No | Case-insensitive substring match against title, company or location |
+| `roleLevel` | `"intern" \| "graduate" \| "earlyCareer"` | No | Exact match |
+| `location` | `string` | No | Exact match on the trimmed location string, not a substring |
+
+**Returns:** an array, newest first, of:
+
+| Field | Type | Notes |
+|---|---|---|
+| `_id` | `Id<"jobs">` | |
+| `_creationTime` | `number` | Convex-managed epoch ms |
+| `title` | `string` | |
+| `company` | `string` | |
+| `location` | `string` | `""` when unset |
+| `url` | `string` | `""` when unset |
+| `status` | `string` | Always `"approved"` here |
+| `tags` | `string[]` | `[]` when unset |
+| `roleLevel` | role level or `undefined` | |
+| `isBookmarked` | `boolean` | Always `false` for signed-out callers |
+
+`roleLevel` and `location` are served by indexes — the query picks `by_status_roleLevel_location`, `by_status_roleLevel`, `by_status_location` or `by_status` depending on which filters are present. `searchTerm` is applied in memory after the index read, so it never widens the set beyond what the other filters returned.
 
 ```typescript
 const jobs = useQuery(api.jobs.listApprovedJobs, {
@@ -21,72 +45,139 @@ const jobs = useQuery(api.jobs.listApprovedJobs, {
 });
 ```
 
-**Returns:** Array of approved jobs, sorted by creation date (newest first).
+## `getApprovedJobFilterOptions`
 
-**Parameters:**
-- `searchTerm` - Optional text search over title/company/location
-- `roleLevel` - Optional role level (`intern`, `graduate`, `earlyCareer`)
-- `location` - Optional exact location filter
+| | |
+|---|---|
+| Kind | `query` |
+| Auth | Anonymous allowed |
+| Args | none |
 
-### `getApprovedJobFilterOptions`
+**Returns:** `{ locations: string[] }` — the distinct, trimmed, non-empty locations across approved jobs, sorted alphabetically. Populates the location dropdown so it can never offer a filter value that matches nothing.
 
-Get available location filter values from approved jobs.
+## `postJob`
 
-```typescript
-const options = useQuery(api.jobs.getApprovedJobFilterOptions);
-```
+Submits a job for moderation. The record is inserted with `status: "pending"` and `submitterUserId` set to the caller's Clerk id; it does not appear in `listApprovedJobs` until a moderator approves it.
 
-**Returns:** `{ locations: string[] }`
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Authenticated |
 
-## Mutations
+| Arg | Type | Required | Limit |
+|---|---|---|---|
+| `title` | `string` | Yes | 120 characters after trimming |
+| `company` | `string` | Yes | 120 characters after trimming |
+| `location` | `string` | Yes | 120 characters after trimming |
+| `url` | `string` | Yes | 2048 characters, `http`/`https` only |
+| `roleLevel` | `"intern" \| "graduate" \| "earlyCareer"` | Yes | |
+| `tags` | `string[]` | No | Up to 10 tags, 32 characters each |
 
-### `postJob`
-
-Submit a new job for review.
+**Returns:** `{ success: true, jobId, message }`, where `message` is the reviewed-within-24-hours confirmation shown in the submit modal.
 
 ```typescript
 const postJob = useMutation(api.jobs.postJob);
 
-await postJob({
-  title: "Junior Developer",
+const result = await postJob({
+  title: "Junior Frontend Developer",
   company: "Acme Inc",
-  roleLevel: "earlyCareer",
   location: "Remote",
-  url: "https://...",
+  url: "https://acme.example/careers/123",
+  roleLevel: "earlyCareer",
   tags: ["React", "TypeScript"],
 });
 ```
 
-**Authentication:** Required
+### Validation
 
-**Parameters:**
-| Field | Type | Required |
-|-------|------|----------|
-| title | string | Yes |
-| company | string | Yes |
-| roleLevel | `"intern" \| "graduate" \| "earlyCareer"` | Yes |
-| location | string | Yes |
-| url | string | Yes |
-| tags | string[] | No |
+`validateAndNormalizeJobSubmission` runs before anything is written. All limits come from the constants at the top of `convex/jobSubmissionSecurity.ts`.
 
-**Returns:** Object with `success`, `jobId`, and `message`.
+Text fields (`title`, `company`, `location`) are trimmed, must be non-empty, must be within their length cap, and must contain no ASCII control characters.
 
-**Submission security controls:**
-- Strict server-side input validation and normalization.
-- URL safety checks (`http`/`https`, no embedded credentials, no local/private-network hosts).
-- Tag sanitization and limits.
-- Per-user submission rate limiting.
+The URL is checked harder, because it is a link the whole site will click:
 
-## Internal Functions
+| Check | Error thrown |
+|---|---|
+| Non-empty after trimming | `URL is required` |
+| At most 2048 characters | `URL must be 2048 characters or fewer` |
+| No control characters | `URL contains invalid characters` |
+| Parses as a URL | `Please enter a valid URL` |
+| Scheme is `http:` or `https:` | `URL must start with http:// or https://` |
+| No embedded credentials | `URL must not include username or password` |
+| Non-empty hostname | `URL must include a valid hostname` |
+| Not a local or private host | `Local or private network URLs are not allowed` |
+
+The private-host check rejects `localhost`, `::1`, any `.local` or `.internal` suffix, IPv6 unique-local (`fc`/`fd`) and link-local (`fe8`–`feb`) prefixes, and the IPv4 ranges `0.0.0.0/8`, `10/8`, `127/8`, `169.254/16`, `172.16–172.31`, and `192.168/16`. The stored `url` is the normalized `URL.toString()` output, not the raw input.
+
+Tags are rejected wholesale if there are more than 10 or if any contains control characters; individually they are trimmed, dropped when empty, capped at 32 characters, and de-duplicated case-insensitively (the first casing seen wins). Errors: `You can add up to 10 tags`, `Tags contain invalid characters`, `Each tag must be 32 characters or fewer`.
+
+<Callout type="info">
+  `src/lib/postJobError.ts` maps these server messages to the friendlier copy shown in the submit modal, so changing an error string here means updating that mapping too. It is covered by `tests/lib/postJobError.test.ts` and the validator itself by `tests/convex/jobSubmissionSecurity.test.ts`.
+</Callout>
+
+### Rate limits
+
+Counted per Clerk user over the `by_submitterUserId` index, across every submission regardless of its status.
+
+| Window | Maximum | Error thrown |
+|---|---|---|
+| 1 hour | 6 submissions | `Rate limit reached. Please wait before submitting another job.` |
+| 24 hours | 20 submissions | `Daily submission limit reached. Please try again tomorrow.` |
+
+### Side effects
+
+1. Any tag that is not already in the `tags` table is inserted, so the tag filter list grows with real submissions.
+2. `internal.notifications.sendNewSubmissionStaffEmail` is scheduled with the new `jobId`. Scheduling failures are logged and swallowed — a broken email configuration never fails a submission. See [Email Subscriptions API](/docs/api-reference/email-subscriptions).
+
+**Throws:** `Not authenticated`, plus any validation or rate-limit error above.
+
+## Role levels
+
+`roleLevel` is one of `intern`, `graduate` or `earlyCareer`, and it drives both the filters and the per-role email notification filters.
+
+`inferRoleLevelFromTitle` in `convex/jobHelpers.ts` derives it from the job title, lowercased:
+
+| Result | Triggered by a title containing |
+|---|---|
+| `intern` | `internship`, `intern`, `co-op`, `co op`, `placement`, `trainee`, `apprentice` |
+| `graduate` | `graduate`, `new grad` |
+| `earlyCareer` | anything else (the fallback) |
+
+<Callout type="warn">
+  Inference is **not** applied to new submissions. `postJob` requires an explicit `roleLevel` from the submitter; `inferRoleLevelFromTitle` is only used by the `backfillJobRoleLevelsFromTitle` migration below.
+</Callout>
+
+## Internal functions
+
+Not callable from the client — they have no entry in the public `api` object and must be run from the Convex dashboard, the CLI, or the cron scheduler.
 
 ### `deleteOldJobs`
 
-Cron job that cleans up old listings:
+| | |
+|---|---|
+| Kind | `internalMutation` |
+| Schedule | Daily at 00:00 UTC, registered as `cleanup old jobs` in `convex/crons.ts` |
+| Args | none |
 
-- Pending/rejected jobs older than 2 weeks: deleted
-- Approved jobs older than 2 weeks: marked as "outdated"
-- Outdated jobs older than 30 days: deleted
+Per run, in order:
+
+| Step | Rule |
+|---|---|
+| Delete stale submissions | `pending` and `rejected` jobs created more than 14 days ago |
+| Delete expired closures | `outdated` jobs created more than 30 days ago |
+| Close aged listings | `approved` jobs created more than 14 days ago become `outdated` |
+
+Expired `outdated` jobs are deleted before new ones are marked, so a job is never marked outdated and hard-deleted in the same run. Deleting a job also deletes its `jobNotificationDeliveries` rows. Each step takes at most 100 jobs; if any step fills its batch the mutation reschedules itself immediately to work through the backlog, which keeps each transaction inside Convex's limits.
+
+**Returns:** `{ deletedCount, markedOutdatedCount }`.
+
+A deleted job does not vanish from a user's dashboard — the tracked application falls back to its `jobSnapshot` and is shown as closed. See [Bookmarks API](/docs/api-reference/bookmarks).
 
 ### `backfillJobRoleLevelsFromTitle`
 
-Backfills missing `roleLevel` values from job title keywords.
+| | |
+|---|---|
+| Kind | `internalMutation` |
+| Args | none |
+
+One-off migration: sets `roleLevel` on every job that is missing one, using `inferRoleLevelFromTitle`. Jobs that already have a role level are skipped. Returns `{ updatedCount }`.

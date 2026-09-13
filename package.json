@@ -21,6 +21,9 @@
     "postinstall": "fumadocs-mdx",
     "sync:prod-to-dev": "bunx convex export --prod --path prod-snapshot.zip && bunx convex import --replace prod-snapshot.zip; rm -f prod-snapshot.zip"
   },
+  "overrides": {
+    "lodash-es": "^4.18.1"
+  },
   "dependencies": {
     "@clerk/nextjs": "^6.37.1",
     "@convex-dev/resend": "^0.2.3",
@@ -30,6 +33,7 @@
     "fumadocs-mdx": "^14.2.6",
     "fumadocs-ui": "^16.5.0",
     "lucide-react": "^0.513.0",
+    "mermaid": "^12.0.0",
     "next": "16.3.5",
     "next-themes": "^0.4.6",
     "react": "^19.2.4",

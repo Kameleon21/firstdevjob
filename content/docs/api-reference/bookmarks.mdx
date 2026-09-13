@@ -1,87 +1,191 @@
 ---
 title: Bookmarks API
-description: Convex functions for bookmarking jobs
+description: Convex functions for saving jobs and tracking application progress
 ---
 
-# Bookmarks API
+A bookmark and a tracked application are the same record: one row in the `trackedApplications` table, created the moment a user saves a job and carrying that job through `saved → applied → interviewing → offer → accepted`. All of it lives in `convex/bookmarks.ts`; the status rules it enforces live in `convex/applicationIntegrity.ts`. Ownership is checked on every write by comparing `userId` against the Clerk identity, so a bookmark id from another user is rejected rather than ignored.
 
-Functions for saving and managing bookmarked jobs.
+<Callout type="info">
+  The dashboard does not call the queries on this page. It reads bookmarks, role and pending jobs in a single query, `dashboard.getDashboardData` (`convex/dashboard.ts`), and uses the mutations here for writes. `getUserBookmarks` and `getBookmarkStatus` still exist and still work.
+</Callout>
 
-## Queries
+## `toggleBookmark`
 
-### `getUserBookmarks`
+Saves a job, or un-saves it — but only while there is nothing to lose.
 
-Get all bookmarks for the current user.
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Authenticated |
 
-```typescript
-const bookmarks = useQuery(api.bookmarks.getUserBookmarks);
-```
+| Arg | Type | Required |
+|---|---|---|
+| `jobId` | `Id<"jobs">` | Yes |
 
-**Authentication:** Required
+**Returns:** `{ bookmarked: boolean, tracked: boolean }`
 
-**Returns:** Array of tracked applications with populated job data and availability metadata.
+| Return | Meaning |
+|---|---|
+| `{ bookmarked: true, tracked: false }` | A new row was created with status `saved` |
+| `{ bookmarked: false, tracked: false }` | An untouched `saved` row was deleted |
+| `{ bookmarked: true, tracked: true }` | Nothing was deleted: the row has progress, so it was kept |
 
-### `getBookmarkStatus`
+A row counts as having progress when its `status` is anything other than `saved`, or when its `notes` contain non-whitespace text. In that case the toggle is a no-op and returns `tracked: true` so the caller can explain why the job stayed saved — deleting an application history from a one-click toggle on a list page is never correct. Removing a tracked application is a separate, explicit action: the "Remove from tracker" button on the dashboard card, which calls `removeTrackedApplication`.
 
-Check if a job is bookmarked by the current user.
+New rows are created with a `jobSnapshot` (a copy of the job's title, company, location, url, creation time, tags and role level) and a `statusHistory` seeded with a single `saved` entry.
 
-```typescript
-const status = useQuery(api.bookmarks.getBookmarkStatus, { jobId });
-```
-
-**Authentication:** Required
-
-**Parameters:**
-- `jobId` - ID of the job to check
-
-**Returns:** Object with `bookmarked` boolean.
-
-## Mutations
-
-### `toggleBookmark`
-
-Add or remove a bookmark.
+**Throws:** `Not authenticated`, `Job not found`.
 
 ```typescript
 const toggleBookmark = useMutation(api.bookmarks.toggleBookmark);
 
-await toggleBookmark({ jobId });
-```
-
-**Authentication:** Required
-
-**Parameters:**
-- `jobId` - ID of the job to bookmark/unbookmark
-
-**Returns:** Object with `bookmarked` boolean.
-
-### `removeTrackedApplication`
-
-Remove a tracked application from the dashboard.
-
-```typescript
-const removeTrackedApplication = useMutation(
-  api.bookmarks.removeTrackedApplication
-);
-
-await removeTrackedApplication({ bookmarkId });
-```
-
-**Authentication:** Required
-**Parameters:**
-- `bookmarkId` - Tracked application ID
-
-## Usage Example
-
-```tsx
-function BookmarkButton({ jobId }) {
-  const bookmarkStatus = useQuery(api.bookmarks.getBookmarkStatus, { jobId });
-  const toggleBookmark = useMutation(api.bookmarks.toggleBookmark);
-
-  return (
-    <button onClick={() => toggleBookmark({ jobId })}>
-      {bookmarkStatus?.bookmarked ? "Bookmarked" : "Bookmark"}
-    </button>
-  );
+const result = await toggleBookmark({ jobId: job._id });
+if (result.bookmarked && result.tracked) {
+  // Kept: this job is being tracked on the dashboard.
 }
 ```
+
+## `updateBookmarkStatus`
+
+The mutation that powers application tracking. It writes the status, optionally the notes, and appends to `statusHistory` whenever the status actually changes.
+
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Authenticated, and must own the row |
+
+| Arg | Type | Required | Notes |
+|---|---|---|---|
+| `bookmarkId` | `Id<"trackedApplications">` | Yes | |
+| `status` | `"saved" \| "applied" \| "interviewing" \| "offer" \| "rejected" \| "accepted"` | Yes | Must be the current status or an allowed transition |
+| `notes` | `string` | No | Trimmed, max 2000 characters. Omitting it leaves existing notes alone |
+
+**Returns:** `{ success: true }`
+
+**Throws:**
+
+| Error | Cause |
+|---|---|
+| `Not authenticated` | No Clerk identity |
+| `Bookmark not found` | No row with that id |
+| `Unauthorized` | The row belongs to another user |
+| `Invalid status transition from X to Y.` | Not in the transition table below |
+| `Notes must be 2000 characters or fewer.` | `notes` exceeds `MAX_NOTES_LENGTH` after trimming |
+
+Passing the current status is always allowed — that is how a notes-only edit is saved, and it does not append a history entry.
+
+```typescript
+const updateBookmarkStatus = useMutation(api.bookmarks.updateBookmarkStatus);
+
+await updateBookmarkStatus({ bookmarkId, status: "applied" });
+await updateBookmarkStatus({ bookmarkId, status: "applied", notes: "Phone screen booked" });
+```
+
+### Allowed status transitions
+
+From `allowedStatusTransitions` in `convex/applicationIntegrity.ts`. Forward progress, plus a way back out of the two end states so a mis-click on Rejected or Accepted is recoverable without deleting the record.
+
+| From | Allowed next statuses |
+|---|---|
+| `saved` | `applied`, `interviewing`, `rejected` |
+| `applied` | `interviewing`, `offer`, `rejected` |
+| `interviewing` | `offer`, `rejected` |
+| `offer` | `accepted`, `rejected` |
+| `rejected` | `saved`, `applied`, `interviewing`, `offer` |
+| `accepted` | `offer`, `rejected` |
+
+<Mermaid
+  title="Application status transitions enforced by updateBookmarkStatus"
+  chart={`
+stateDiagram-v2
+  [*] --> saved : toggleBookmark
+  saved --> applied
+  saved --> interviewing
+  saved --> rejected
+  applied --> interviewing
+  applied --> offer
+  applied --> rejected
+  interviewing --> offer
+  interviewing --> rejected
+  offer --> accepted
+  offer --> rejected
+  accepted --> offer
+  accepted --> rejected
+  rejected --> saved
+  rejected --> applied
+  rejected --> interviewing
+  rejected --> offer
+`}
+/>
+
+Note what is not there: `saved` cannot jump straight to `offer` or `accepted`, `interviewing` cannot fall back to `applied`, and nothing can move to `saved` except from `rejected`.
+
+The dashboard's status dropdown is built from the same table — `DashboardJobCard` imports `getAllowedStatusTransitions` directly from `convex/applicationIntegrity.ts`, so the menu only ever offers transitions the server will accept.
+
+## `removeTrackedApplication`
+
+Deletes a tracked application outright, including its status history and notes. This is the "Remove from tracker" button on the dashboard card, and it is the only way to delete a row that has progress on it.
+
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Authenticated, and must own the row |
+
+| Arg | Type | Required |
+|---|---|---|
+| `bookmarkId` | `Id<"trackedApplications">` | Yes |
+
+**Returns:** `{ success: true }`
+
+**Throws:** `Not authenticated`, `Bookmark not found`, `Unauthorized`.
+
+## `getBookmarkStatus`
+
+| | |
+|---|---|
+| Kind | `query` |
+| Auth | Anonymous allowed |
+
+| Arg | Type | Required |
+|---|---|---|
+| `jobId` | `Id<"jobs">` | Yes |
+
+**Returns:** `{ bookmarked: boolean }`. Signed-out callers always get `{ bookmarked: false }` rather than an error.
+
+The job list does not need this query: `jobs.listApprovedJobs` already returns an `isBookmarked` flag per job for authenticated callers.
+
+## `getUserBookmarks`
+
+| | |
+|---|---|
+| Kind | `query` |
+| Auth | Anonymous allowed — returns `[]` when signed out |
+| Args | none |
+
+**Returns:** an array, newest first, of:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | `Id<"trackedApplications">` | Pass this as `bookmarkId` to the mutations |
+| `status` | application status | |
+| `notes` | `string \| null` | |
+| `job` | object | `id`, `title`, `company`, `location`, `url`, `createdAt`, `tags`, `roleLevel`, `availability`, `closureReason` |
+
+`job` is resolved in one of three ways:
+
+| Source job | `availability` | `closureReason` |
+|---|---|---|
+| Still exists, status is not `outdated` | `active` | `null` |
+| Still exists, status is `outdated` | `closed` | `outdated` |
+| Deleted, but the row has a `jobSnapshot` | `closed` | `removed` |
+
+A row whose job was deleted **and** which has no `jobSnapshot` is dropped from the result. `dashboard.getDashboardData` returns bookmarks in exactly this shape.
+
+## `backfillTrackedApplicationSnapshots`
+
+| | |
+|---|---|
+| Kind | `internalMutation` — not callable from the client |
+| Args | none |
+
+Fills in `jobSnapshot` for older rows created before snapshots existed, skipping rows that already have one and rows whose job is already gone. Returns `{ updatedCount }`. Run it from the Convex dashboard or CLI, not from the app.

@@ -1,67 +1,155 @@
 ---
 title: Data Flow
-description: How data moves through the application
+description: How a request travels from a React component to Convex and back, and how a job moves through its lifecycle
 ---
 
-# Data Flow
+Every read in FirstDevJob is a live subscription and every write is a Convex mutation. Components call `useQuery` and `useMutation` from `convex/react` against the generated `api` object in `convex/_generated/api`; there is no fetch layer, no REST route and no client cache to invalidate. This page traces a read, a write, and the lifecycle a job follows from submission to deletion.
 
-Understanding how data flows through FirstDevJob helps when debugging or adding features.
+## Reads are subscriptions
 
-## Request Types
-
-### Queries (Read Operations)
-
-Queries fetch data and automatically subscribe to updates:
+`useQuery` opens a subscription over the Convex WebSocket. When any mutation changes data the query depends on, Convex recomputes it and pushes the new result to every subscribed client.
 
 ```typescript
-// Component subscribes to job listings
-const jobs = useQuery(api.jobs.listApproved);
+// src/components/JobSearchWrapper.tsx
+const filterOptions = useQuery(api.jobs.getApprovedJobFilterOptions, {});
 
-// Automatically updates when data changes
-```
-
-### Mutations (Write Operations)
-
-Mutations modify data and trigger subscription updates:
-
-```typescript
-// Submit a new job
-const submitJob = useMutation(api.jobs.submit);
-
-await submitJob({
-  title: "Junior Developer",
-  company: "Acme Inc",
-  // ...
+const jobs = useQuery(api.jobs.listApprovedJobs, {
+  searchTerm: debouncedSearchQuery.trim() || undefined,
+  roleLevel: selectedRoleLevel || undefined,
+  location: selectedLocation || undefined,
 });
 ```
 
-## Authentication Flow
+All three arguments are optional. `listApprovedJobs` picks the narrowest index that matches the arguments it was given — `by_status_roleLevel_location`, `by_status_roleLevel`, `by_status_location` or `by_status` — and only the free-text `searchTerm` is applied in memory, over title, company and location.
 
-1. User clicks Sign In
-2. Clerk modal opens
-3. User authenticates (OAuth or email)
-4. Clerk returns JWT token
-5. Convex validates token on each request
-6. User identity available in backend functions
+The query also reads the caller's identity. When a request is authenticated it loads that user's tracked applications and returns an `isBookmarked` flag per job, so the list page does not need a second round trip.
 
-## Job Lifecycle
+<Mermaid
+  title="A subscribed job list updating when a moderator approves a job"
+  chart={`
+sequenceDiagram
+  participant C as React component
+  participant V as Convex client
+  participant S as Convex backend
+  participant M as Moderator
+  C->>V: useQuery(api.jobs.listApprovedJobs, filters)
+  V->>S: subscribe over WebSocket
+  S->>S: read jobs by index, attach isBookmarked
+  S-->>V: results
+  V-->>C: render
+  M->>S: useMutation(api.admin.updateJobStatus)
+  S->>S: requireModOrAdmin, patch status to approved
+  S-->>V: push recomputed results
+  V-->>C: re-render without refetching
+`}
+/>
 
+## Writes are mutations
+
+Mutations run as a single transaction on the backend. They validate arguments through `v.*` validators, re-check authorization server-side, and schedule any slow work rather than awaiting it.
+
+```typescript
+// src/components/PostJobModal.tsx
+const postJob = useMutation(api.jobs.postJob);
+
+const result = await postJob({
+  title: formData.title,
+  company: formData.company,
+  roleLevel: formData.roleLevel,
+  location: formData.location,
+  url: validatedUrl,
+  tags: formData.selectedTags,
+});
+// result: { success: true, jobId, message }
 ```
-Submit → Pending → Approved → Listed
-                ↘ Rejected
 
-After 2 weeks:
-Approved → Outdated → Deleted (30 days)
-Pending/Rejected → Deleted
-```
+`postJob` does five things in order: require an authenticated identity, validate and normalize the submission, enforce per-user rate limits, insert the job with `status: "pending"`, and insert any new tag names into the `tags` table. It then schedules `internal.notifications.sendNewSubmissionStaffEmail` with `ctx.scheduler.runAfter(0, ...)` inside a `try`/`catch`, so a scheduling failure logs an error but never rolls back the submission.
 
-## Real-time Updates
+### Submission limits
 
-Convex automatically pushes updates to subscribed clients:
+| Limit | Value | Where |
+|---|---|---|
+| Submissions per user per hour | 6 | `MAX_SUBMISSIONS_PER_HOUR` in `convex/jobs.ts` |
+| Submissions per user per day | 20 | `MAX_SUBMISSIONS_PER_DAY` in `convex/jobs.ts` |
+| Title / company / location length | 120 characters each | `convex/jobSubmissionSecurity.ts` |
+| URL length | 2048 characters | `convex/jobSubmissionSecurity.ts` |
+| Tags per job | 10, each at most 32 characters | `convex/jobSubmissionSecurity.ts` |
 
-1. Admin approves a job
-2. Convex mutation updates database
-3. All clients with active `listApproved` query receive update
-4. UI re-renders with new data
+Both rate limits are counted from the submitter's own jobs via the `by_submitterUserId` index, using `_creationTime`. URLs must parse, must be `http:` or `https:`, must not embed credentials, and must not point at localhost or a private network range. Tags are trimmed and de-duplicated case-insensitively.
 
-No polling or manual refresh needed.
+## Job lifecycle
+
+<Mermaid
+  title="Job states and the transitions that move a job between them"
+  chart={`
+stateDiagram-v2
+  [*] --> pending: postJob
+  pending --> approved: updateJobStatus
+  pending --> rejected: updateJobStatus
+  approved --> outdated: markJobOutdated
+  approved --> outdated: deleteOldJobs, 14 days after creation
+  pending --> [*]: deleteOldJobs, 14 days after creation
+  rejected --> [*]: deleteOldJobs, 14 days after creation
+  outdated --> [*]: deleteOldJobs, 30 days after creation
+  approved --> [*]: admin deleteJob
+`}
+/>
+
+`admin.deleteJob` works on a job in any state; the diagram shows it from `approved` because that is the common case. Every other threshold is measured from the job's `_creationTime`, not from the moment its status last changed. An approved job is therefore marked `outdated` on day 14 and hard-deleted on day 30 — roughly sixteen days as a visible-but-closed listing, not thirty.
+
+| Status | Visible on `/` | Aged out by the cron |
+|---|---|---|
+| `pending` | No | Deleted 14 days after creation |
+| `rejected` | No | Deleted 14 days after creation |
+| `approved` | Yes | Marked `outdated` 14 days after creation |
+| `outdated` | No | Deleted 30 days after creation |
+
+## The daily cleanup
+
+`convex/crons.ts` runs `internal.jobs.deleteOldJobs` every day at 00:00 UTC. One run:
+
+1. Deletes stale `pending` and `rejected` jobs.
+2. Deletes `outdated` jobs past the 30-day mark. This happens *before* step 3 so a job can never be marked outdated and hard-deleted in the same run.
+3. Marks `approved` jobs older than 14 days as `outdated`.
+
+Each step takes at most `CLEANUP_BATCH_SIZE` (100) documents so the mutation stays inside Convex's transaction limits. If any step fills its batch, the mutation reschedules itself with `ctx.scheduler.runAfter(0, internal.jobs.deleteOldJobs, {})` and keeps draining the backlog.
+
+Cron deletions also remove the job's `jobNotificationDeliveries` rows, via the `by_jobId_userId` index. Note that the manual `admin.deleteJob` mutation deletes only the job document, so a job removed by a moderator can leave delivery rows behind; they are harmless — the table is only read to suppress duplicate emails for a job that no longer exists — but they are not cleaned up.
+
+<Callout type="info">
+A user's tracked applications survive the job they point at. `toggleBookmark` stores a `jobSnapshot` (title, company, location, url, createdAt, tags, roleLevel) on the `trackedApplications` row. When the job document is gone, the dashboard falls back to that snapshot and shows the entry with `availability: "closed"` and `closureReason: "removed"`; a job that is merely `outdated` shows as `closed` with reason `"outdated"`.
+</Callout>
+
+## Approval fan-out
+
+Approving a job is the one write that triggers email to users. `api.admin.updateJobStatus` patches the status, then — only when the previous status was not already `approved` — schedules `internal.notifications.sendJobApprovedUserEmails`.
+
+<Mermaid
+  title="What happens after a moderator approves a job"
+  chart={`
+flowchart TD
+  A["updateJobStatus, status approved"] --> B["patch job status"]
+  B --> C{"was it already approved?"}
+  C -->|"yes"| D["do nothing"]
+  C -->|"no"| E["schedule sendJobApprovedUserEmails"]
+  E --> F["getActiveSubscribersForRole"]
+  F --> G{"already in jobNotificationDeliveries?"}
+  G -->|"yes"| H["skip, count as deduped"]
+  G -->|"no"| I["resend.sendEmail"]
+  I --> J["insert jobNotificationDeliveries row"]
+`}
+/>
+
+`getActiveSubscribersForRole` returns every active subscription whose `roleFilters` is empty or contains the job's `roleLevel`; an empty filter list means "all role levels". The `jobNotificationDeliveries` table is the de-duplication ledger, so re-approving a job cannot email the same subscriber twice. The action returns `{ attemptedCount, sentCount, dedupedCount }`, and a failure for one subscriber is logged and skipped rather than aborting the loop.
+
+Details of the subscription functions are in the [Email Subscriptions API](/docs/api-reference/email-subscriptions); the moderation mutations are in the [Admin API](/docs/api-reference/admin).
+
+## Dashboard reads
+
+`/dashboard` hydrates from a single query, `api.dashboard.getDashboardData`, rather than composing several. It returns the user, their tracked applications with job data resolved, their role flags, the pending-jobs queue (only when the caller is a moderator or admin) and all tag names. When the caller is signed out it returns empty collections rather than throwing.
+
+The one addition is `AdminSection`, which subscribes to `api.admin.getApprovedJobs` for its second tab — and passes `"skip"` instead of arguments when `userRole.isModerator` is false, so the query is never sent for an ordinary user.
+
+## Deleting an account
+
+`api.profiles.deleteAccount` removes the caller's `trackedApplications`, `jobNotificationDeliveries` and `emailSubscriptions` rows and then the `profiles` row, returning counts for each. Jobs the user submitted are not deleted — they keep their `submitterUserId`, which no longer resolves to a profile. The `/profile` UI calls this mutation first and only then Clerk's `user.delete()`, so the Convex rows are gone before the identity that authorizes removing them.

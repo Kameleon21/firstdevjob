@@ -1,84 +1,149 @@
 ---
 title: Deployment
-description: How to deploy FirstDevJob
+description: How code and configuration reach production
 ---
 
-# Deployment
+Production is two independently deployed halves: the Convex backend, pushed by GitHub Actions, and the Next.js frontend, built by Vercel's Git integration. A push to `Master` starts both at once. Nothing here deploys from a laptop, and no environment variable value belongs in the repository — only names appear below.
 
-FirstDevJob is deployed on Vercel with Convex as the backend.
+## What happens on a push to Master
 
-## Prerequisites
+<Mermaid
+  title="Push to Master: CI, Convex deploy and the Vercel build run in parallel"
+  chart={`
+flowchart TD
+  push["git push to Master"] --> ci["ci.yml"]
+  push --> deploy["deploy.yml"]
+  push --> vercel["Vercel Git integration"]
 
-- Vercel account
-- Convex account
-- Clerk account
+  ci --> quality["quality: lint, tsc --noEmit, test:ci"]
+  ci --> build["build: bun run build"]
+  ci --> security["security: bun run audit:deps"]
 
-## Environment Variables
+  deploy --> pre["test-before-deploy: lint, types, tests, build"]
+  pre --> convex["deploy-convex: bunx convex deploy"]
+  convex --> vjob["deploy-vercel (skipped)"]
+  convex --> prodbe["Convex production deployment"]
 
-### Vercel (Frontend)
+  vercel --> vbuild["next build with NEXT_PUBLIC_* inlined"]
+  vbuild --> prodfe["Production frontend at first-dev-job.com"]
 
-```
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
-NEXT_PUBLIC_CONVEX_URL=https://...convex.cloud
-NEXT_PUBLIC_FEEDBACK_BOARD_URL=https://your-board.fider.io
-```
+  prodbe --> live["Live site"]
+  prodfe --> live
+`}
+/>
 
-### Convex (Backend)
+<Callout type="warn">
+  The `deploy-vercel` job in `deploy.yml` is gated on the repository variable `VERCEL_CONFIGURED == 'true'`, which is not set — so the job is always skipped and the frontend is deployed by Vercel's own Git integration instead. That means the Convex deploy and the Vercel build race: a backend change and the frontend that depends on it are not guaranteed to go live in order. Ship backwards-compatible schema and function changes first, then the frontend that uses them.
+</Callout>
 
-```
-CLERK_JWT_ISSUER_DOMAIN=https://...clerk.accounts.dev
-```
+### ci.yml
 
-## Deployment Steps
+Runs on every pull request, every push to `Master`, and on manual dispatch. Concurrency is grouped per PR or ref with `cancel-in-progress`, so a new commit cancels the previous run. Bun 1.4.2, with `~/.bun/install/cache` keyed on `bun.lock`, and `bun install --frozen-lockfile` everywhere.
 
-### 1. Deploy Convex
+| Job | Steps |
+|---|---|
+| `quality` | `bun run lint`, `bun x tsc --noEmit`, `bun run test:ci`, upload coverage to Codecov (non-blocking) |
+| `build` | `bun run build` with `NEXT_PUBLIC_CONVEX_URL` (falling back to a dummy URL) and `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` |
+| `security` | `bun run audit:deps` — `bun audit` at high severity with three advisories explicitly ignored |
+| `dependency-review` | Pull requests only; fails on high-severity dependency changes |
+
+The ignored advisories are transitive pins with no patched release in range (`image-size` via fumadocs-core, `js-cookie` via `@clerk/shared`). Re-check them with `bun audit` when bumping Fumadocs or Clerk.
+
+### deploy.yml
+
+Runs on pushes to `Master` and on manual dispatch.
+
+1. **`test-before-deploy`** — lint, `bun x tsc --noEmit`, `bun run test:ci`, and a production build. This duplicates `ci.yml` on purpose: the deploy must not depend on another workflow's result.
+2. **`deploy-convex`** — needs `test-before-deploy`, then runs `bunx convex deploy` with `CONVEX_DEPLOY_KEY`. Production is the default target for `convex deploy`, and the deploy key identifies the deployment, so there is no `--prod` flag here. This pushes functions and applies the schema.
+3. **`deploy-vercel`** — skipped, as described above.
+
+### Required GitHub configuration
+
+| Name | Kind | Purpose |
+|---|---|---|
+| `CONVEX_DEPLOY_KEY` | Secret | Authenticates CI against the production Convex deployment |
+| `NEXT_PUBLIC_CONVEX_URL` | Secret | Used by the CI build steps |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Secret | Used by the CI build steps |
+| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | Secrets | Only needed if the Vercel job is ever enabled |
+| `VERCEL_CONFIGURED` | Repository variable | Set to `true` to enable the `deploy-vercel` job |
+
+## Environment variables
+
+Two separate systems, two separate places to set them. A variable set in Vercel is invisible to Convex functions, and vice versa.
+
+### Convex (production deployment)
+
+Set in the Convex dashboard, or with `bunx convex env set --prod NAME value`.
+
+| Name | Notes |
+|---|---|
+| `CLERK_JWT_ISSUER_DOMAIN` | Read by `convex/auth.config.ts` |
+| `RESEND_API_KEY` | Credentials for the Resend component |
+| `RESEND_TEST_MODE` | Must be `false` in production; defaults to test mode when unset |
+| `EMAIL_FROM` | Sender address for both notification emails |
+| `STAFF_NOTIFICATION_EMAILS` | Comma-separated moderation recipients |
+| `NEXT_PUBLIC_SITE_URL` | Base URL used to build links inside emails |
+| `EMAIL_REPLY_TO` | Optional, comma-separated reply-to addresses |
+
+<Callout type="error">
+  `CLERK_JWT_ISSUER_DOMAIN` is the **issuer domain only** — for example `https://clerk.example.com`. It is not the JWKS URL and must not end in `/.well-known/jwks.json`. A wrong value here makes every authenticated Convex call fail while the frontend still looks signed in.
+</Callout>
+
+<Callout type="warn">
+  `RESEND_TEST_MODE` defaults to `true` when it is unset or unparseable (`convex/resend.ts`). A production deployment that never sets it will accept sends and deliver nothing. Set it to `false` deliberately.
+</Callout>
+
+`NEXT_PUBLIC_SITE_URL` carries the `NEXT_PUBLIC_` prefix but is read server-side by Convex actions, so it must be set on the Convex deployment, not only in Vercel.
+
+### Vercel (Next.js build and runtime)
+
+| Name | Notes |
+|---|---|
+| `NEXT_PUBLIC_CONVEX_URL` | Which Convex deployment the browser talks to |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk frontend key |
+| `CLERK_SECRET_KEY` | Server-side Clerk key, never exposed to the browser |
+| `NEXT_PUBLIC_FEEDBACK_BOARD_URL` | Optional; when unset the feedback links and page degrade gracefully |
+
+<Callout type="warn">
+  `NEXT_PUBLIC_*` values are inlined into the JavaScript bundle at build time. Changing one in the Vercel dashboard does nothing until a new build runs — redeploying the existing build reuses the old value. Trigger a fresh build after any change.
+</Callout>
+
+Clerk production keys are bound to the domains configured in the Clerk dashboard, so a preview URL will not authenticate against production keys.
+
+`.env.example` lists every name, including `CONVEX_DEPLOYMENT` which is written by `bunx convex dev` for local work.
+
+## Deployments and data
+
+Convex dev and prod are separate deployments with separate data and separate environment variables. Commands operate on dev unless told otherwise, so promoting configuration means re-running it with `--prod`.
 
 ```bash
-bunx convex deploy
+bunx convex env list --prod
+bunx convex env set --prod EMAIL_FROM hello@example.com
 ```
 
-This deploys the backend functions and schema.
+### Copying production data into dev
 
-### 2. Deploy to Vercel
+```bash
+bun run sync:prod-to-dev
+```
 
-Connect your GitHub repository to Vercel. On push to main:
+<Callout type="error">
+  This is destructive and it moves personal data. It exports the production snapshot and runs `convex import --replace` against your dev deployment, wiping whatever dev currently holds, and the snapshot contains real user emails and live unsubscribe tokens. The temporary `prod-snapshot.zip` is deleted afterwards. Do not run it unless you need production data to reproduce something, and never point it the other way.
+</Callout>
 
-1. Vercel builds the Next.js app
-2. Static pages are generated
-3. App is deployed to edge network
+## Domain and edge
 
-### 3. Configure Domains
+The site is served at `first-dev-job.com`. The apex host issues a `307` redirect to the `www` host at Vercel's edge; that redirect is Vercel project configuration, not code, so it will not appear in `next.config.ts`.
 
-- Set up custom domain in Vercel
-- Update Clerk allowed origins
-- Update Convex CORS settings if needed
+`next.config.ts` does own the security headers applied to every response: `Strict-Transport-Security`, `X-Frame-Options: DENY`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and `Content-Security-Policy: frame-ancestors 'none'`. Only `frame-ancestors` is set for CSP — a full policy needs an allowlist for Clerk, Convex and Vercel and has not been rolled out.
 
-## CI/CD
+## Verifying a deploy
 
-GitHub Actions (`.github/workflows/deploy.yml`) run the full pipeline on push to `Master`:
+1. GitHub Actions: `CI` and `Production Deployment` both green, `deploy-convex` succeeded.
+2. Vercel: the deployment for the same commit is Ready.
+3. Convex dashboard: the production deployment shows the new functions; check logs for scheduled email actions.
+4. The site: sign in, load `/dashboard`, and confirm a Convex query returns data — that exercises Clerk, the JWT issuer configuration and Convex in one step.
 
-1. **Pre-deployment tests** — lint, type checking, build verification
-2. **Deploy Convex functions** — pushes backend code (functions, schema) to the prod Convex deployment
-3. **Deploy to Vercel** — builds and deploys the frontend with production environment variables
+## Rolling back
 
-Convex must deploy before Vercel so that the frontend is always built against up-to-date backend functions.
-
-### Required GitHub Secrets
-
-| Secret | Purpose |
-|---|---|
-| `NEXT_PUBLIC_CONVEX_URL` | Prod Convex deployment URL (inlined at build time) |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key for the frontend |
-| `CONVEX_DEPLOY_KEY` | Authenticates CI to push code to the prod Convex deployment |
-| `VERCEL_TOKEN` | Vercel deploy token |
-| `VERCEL_ORG_ID` | Vercel organization ID |
-| `VERCEL_PROJECT_ID` | Vercel project ID |
-
-You can get the `CONVEX_DEPLOY_KEY` from the Convex dashboard under your prod deployment's Settings.
-
-## Monitoring
-
-- **Vercel**: Frontend analytics, error tracking
-- **Convex**: Function logs, database metrics
-- **Clerk**: Auth events, user sessions
+Convex keeps previous pushes: redeploy the last good commit through `deploy.yml` (manual dispatch) rather than editing functions in the dashboard. Vercel can promote a previous deployment instantly from its dashboard. Because the two halves deploy independently, roll back the one that broke, and remember that a schema change is not undone by rolling back the frontend.
