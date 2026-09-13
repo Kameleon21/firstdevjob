@@ -1,0 +1,156 @@
+---
+title: Email Subscriptions API
+description: Convex functions for job notification subscriptions and the emails they send
+---
+
+Users can ask to be emailed whenever a job matching their role levels is approved. The subscription itself lives in `convex/emailSubscriptions.ts` and is managed from `/profile`; the sending lives in `convex/notifications.ts` as internal actions that go through the `@convex-dev/resend` component configured in `convex/resend.ts`. Nothing here is called directly by a user to send mail — emails are only ever a side effect of submitting a job or of a moderator approving one.
+
+## `getMySubscription`
+
+| | |
+|---|---|
+| Kind | `query` |
+| Auth | Anonymous allowed |
+| Args | none |
+
+**Returns:** `null` when signed out or when the user has never subscribed, otherwise `{ isActive, roleFilters }`. The email address and the unsubscribe token are deliberately not returned.
+
+## `subscribe`
+
+Creates the subscription, or reactivates and updates an existing one.
+
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Authenticated |
+
+| Arg | Type | Required | Notes |
+|---|---|---|---|
+| `roleFilters` | `Array<"intern" \| "graduate" \| "earlyCareer">` | Yes | De-duplicated server-side. An empty array means every role level |
+
+**Returns:** `{ success: true, isActive: true, roleFilters }`
+
+The email address is taken from the Clerk identity token, never from an argument, so a user can only ever subscribe their own verified address. On an existing row the `unsubscribeToken` is deliberately left unchanged, which keeps unsubscribe links already sitting in inboxes valid.
+
+**Throws:** `Not authenticated`; `Email address is required to manage notifications` when the identity carries no email.
+
+```typescript
+const subscribe = useMutation(api.emailSubscriptions.subscribe);
+await subscribe({ roleFilters: ["intern", "graduate"] });
+```
+
+## `updateRoleFilters`
+
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Authenticated |
+
+| Arg | Type | Required |
+|---|---|---|
+| `roleFilters` | `Array<"intern" \| "graduate" \| "earlyCareer">` | Yes |
+
+**Returns:** `{ success: true, roleFilters }`. Does not change `isActive` — an inactive subscription keeps its filters and stays inactive.
+
+**Throws:** `Not authenticated`, `Subscription not found`.
+
+## `unsubscribeFromProfile`
+
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Authenticated |
+| Args | none |
+
+Sets `isActive: false` on the caller's subscription. The row, the token and the filters are kept, so re-subscribing later restores the same settings.
+
+**Returns:** `{ success: true }` — also when there was no subscription at all.
+
+**Throws:** `Not authenticated`.
+
+## `unsubscribeByToken`
+
+Powers the one-click unsubscribe link in every notification email, at `/unsubscribe?token=...`.
+
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Anonymous — this runs for people who are not signed in |
+
+| Arg | Type | Required |
+|---|---|---|
+| `token` | `string` | Yes |
+
+**Returns:** `{ success: true }` when a subscription matched the token (already-inactive rows also return `true`), `{ success: false }` when the token is empty or unknown. It throws nothing, and it never reveals whose subscription a token belongs to.
+
+Tokens are `crypto.randomUUID()` values stored in `emailSubscriptions.unsubscribeToken` and looked up through the `by_unsubscribeToken` index.
+
+## `getActiveSubscribersForRole`
+
+| | |
+|---|---|
+| Kind | `internalQuery` — not callable from the client |
+
+| Arg | Type | Required |
+|---|---|---|
+| `roleLevel` | `"intern" \| "graduate" \| "earlyCareer"` | No |
+
+Reads active subscriptions through the `by_isActive` index and keeps those whose `roleFilters` are empty or contain `roleLevel`. When `roleLevel` is omitted — a job with no role level — every active subscriber matches.
+
+**Returns:** `{ userId, email, unsubscribeToken }[]`.
+
+## Sending actions
+
+Both live in `convex/notifications.ts`, are `internalAction`s, and are scheduled by other functions rather than called from the client. Both return a result object instead of throwing, so a misconfigured mailer degrades to a log line rather than a failed mutation.
+
+### `sendNewSubmissionStaffEmail`
+
+Scheduled by [`jobs.postJob`](/docs/api-reference/jobs) with the new `jobId`. Emails every address in `STAFF_NOTIFICATION_EMAILS` with the job's details and a link to `/dashboard`.
+
+**Returns:** `{ success: false, reason }` with `reason` of `missing_staff_recipients`, `missing_email_from` or `job_not_found`; otherwise `{ success, attemptedCount, sentCount }` where `success` is true if at least one send was enqueued.
+
+### `sendJobApprovedUserEmails`
+
+Scheduled by [`admin.updateJobStatus`](/docs/api-reference/admin) when a job moves into `approved` from any other status.
+
+1. Re-reads the job and stops unless it is still `approved`.
+2. Loads matching subscribers via `getActiveSubscribersForRole`.
+3. For each subscriber, checks `jobNotificationDeliveries` through the `by_jobId_userId` index and skips anyone already emailed about this job.
+4. Sends the email, then writes a `jobNotificationDeliveries` row with `sentAt`.
+
+**Returns:** `{ success: false, reason }` with `reason` of `missing_email_from`, `site_url_not_configured` or `job_not_found_or_not_approved`; otherwise `{ success: true, attemptedCount, sentCount, dedupedCount }`.
+
+A per-subscriber failure is logged and the loop continues, so one bad address cannot block the rest of the batch. Because the delivery row is only written after a successful send, a failed send will be retried the next time the action runs for that job.
+
+### Supporting internal functions
+
+| Function | Kind | Purpose |
+|---|---|---|
+| `getJobForStaffNotification` | `internalQuery` | Job fields for the staff email; returns `null` if the job is gone |
+| `getJobForUserNotification` | `internalQuery` | Job fields for the subscriber email; returns `null` unless the job is still `approved` |
+| `hasJobNotificationDelivery` | `internalQuery` | Deduplication check for one job and user |
+| `createJobNotificationDelivery` | `internalMutation` | Records a successful send |
+
+## Configuration
+
+These are Convex deployment environment variables, set per deployment (dev and prod are separate). Names only — see [Deployment](/docs/technical/deployment).
+
+| Variable | Used for |
+|---|---|
+| `RESEND_API_KEY` | Credentials for the Resend component |
+| `RESEND_TEST_MODE` | Whether sends are real. **Defaults to `true`** when unset |
+| `EMAIL_FROM` | Sender address; without it both actions abort |
+| `STAFF_NOTIFICATION_EMAILS` | Comma-separated staff recipients, trimmed and de-duplicated |
+| `NEXT_PUBLIC_SITE_URL` | Base for the dashboard, browse and unsubscribe links; a trailing slash is stripped |
+| `EMAIL_REPLY_TO` | Optional comma-separated reply-to addresses |
+
+<Callout type="warn">
+  `convex/resend.ts` is safe by default: test mode is on unless `RESEND_TEST_MODE` is explicitly `false` (`0`/`false`/`no` are accepted, as are `1`/`true`/`yes` for on; anything unrecognised falls back to on). In test mode no mail reaches real inboxes, so a production deployment missing this variable silently sends nothing.
+</Callout>
+
+Emails are plain-text plus HTML, carry a no-reply notice, and the subscriber email always includes its unsubscribe link.
+
+## Related
+
+- User-facing walkthrough: [Email Notifications](/docs/user-guide/email-notifications)
+- Table and index definitions: [Database Schema](/docs/technical/database-schema)

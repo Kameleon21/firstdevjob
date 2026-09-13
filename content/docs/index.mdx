@@ -1,34 +1,96 @@
 ---
 title: Introduction
-description: Welcome to FirstDevJob - Find your first tech job
+description: Developer and user documentation for FirstDevJob, a job board for people looking for their first role in tech
 ---
 
-# Welcome to FirstDevJob
+FirstDevJob is a job board for internships, graduate roles and other early-career developer jobs. Anyone can browse the listings; signing in adds bookmarking, an application tracker and optional email alerts when a matching job is approved. Submitted jobs are reviewed by a moderator before they appear. These docs cover both sides of that: how to use the site, and how it is built.
 
-FirstDevJob is a platform designed to help aspiring developers find their first job in tech. We curate entry-level positions, internships, and junior roles to make your job search easier.
+The app is a Next.js 16 frontend on Vercel talking directly to a Convex backend, with Clerk for authentication and Resend for email. Every page in the technical sections is written against the code in this repository — if a page disagrees with the source, the source is right and the page is a bug.
 
-## What You'll Find Here
+## Start here
 
-This documentation covers:
+<Cards>
+  <Card
+    title="Getting Started"
+    href="/docs/user-guide/getting-started"
+    description="Create an account and find your first listing."
+  />
+  <Card
+    title="Architecture Overview"
+    href="/docs/architecture/overview"
+    description="How the frontend, Convex, Clerk and Resend fit together."
+  />
+  <Card
+    title="Project Structure"
+    href="/docs/technical/project-structure"
+    description="Where each piece of code lives in the repo."
+  />
+  <Card
+    title="Contributing"
+    href="/docs/technical/contributing"
+    description="Set up the repo locally and open a pull request."
+  />
+</Cards>
 
-- **User Guide** - How to use the platform effectively
-- **Architecture** - Technical overview of how the system works
-- **Technical Reference** - Detailed documentation for contributors
-- **API Reference** - Convex functions and data models
+## All sections
 
-## Quick Links
+### User Guide
 
-- [Getting Started](/docs/user-guide/getting-started) - Create an account and start browsing
-- [Architecture Overview](/docs/architecture/overview) - Understand the system design
-- [Contributing](/docs/technical/contributing) - Help improve FirstDevJob
+- [Getting Started](/docs/user-guide/getting-started) — accounts and first steps
+- [Browsing Jobs](/docs/user-guide/browsing-jobs) — search, role level and location filters
+- [Tracking Applications](/docs/user-guide/tracking-applications) — bookmarks, statuses and notes
+- [Email Notifications](/docs/user-guide/email-notifications) — opting in, role filters, unsubscribing
+- [Posting Jobs](/docs/user-guide/posting-jobs) — submitting a role for review
 
-## Tech Stack
+### Architecture
 
-FirstDevJob is built with modern technologies:
+- [Overview](/docs/architecture/overview) — the system diagram and what runs where
+- [Tech Stack](/docs/architecture/tech-stack) — every dependency and service, with versions
+- [Data Flow](/docs/architecture/data-flow) — subscriptions, mutations and the job lifecycle
+- [Authentication](/docs/architecture/authentication) — Clerk to Convex, roles and authorization
+
+### Technical
+
+- [Project Structure](/docs/technical/project-structure) — directory layout
+- [Database Schema](/docs/technical/database-schema) — Convex tables and indexes
+- [Deployment](/docs/technical/deployment) — CI, environment variables, Convex and Vercel
+- [Contributing](/docs/technical/contributing) — local setup and the PR checklist
+
+### API Reference
+
+- [Jobs](/docs/api-reference/jobs) — listing, filtering, submitting, cleanup
+- [Bookmarks](/docs/api-reference/bookmarks) — tracked applications
+- [Profiles](/docs/api-reference/profiles) — profile reads, updates and account deletion
+- [Email Subscriptions](/docs/api-reference/email-subscriptions) — opt-in and unsubscribe functions
+- [Admin](/docs/api-reference/admin) — moderation functions
+
+## Tech stack
 
 | Technology | Purpose |
-|------------|---------|
-| Next.js | React framework for the frontend |
-| Convex | Real-time backend and database |
-| Clerk | Authentication and user management |
-| Tailwind CSS | Styling and design system |
+|---|---|
+| Next.js 16 (App Router) | Frontend, routing, server rendering, the docs site |
+| React 19 | UI runtime |
+| Convex | Database, backend functions, real-time subscriptions, crons |
+| Clerk | Authentication, sessions, OAuth, JWTs verified by Convex |
+| Resend | Transactional email, sent from Convex via `@convex-dev/resend` |
+| Tailwind CSS 4 | Styling and design tokens |
+| Fumadocs | These docs: MDX content, layout and search |
+| Bun | Package manager and script runner, pinned to 1.4.2 |
+| TypeScript | Types across frontend and backend, including generated Convex types |
+
+Exact versions live in [Tech Stack](/docs/architecture/tech-stack) and in `package.json`.
+
+## Keyboard shortcuts
+
+These work anywhere in the documentation site.
+
+| Shortcut | Action |
+|---|---|
+| `Cmd` + `K` / `Ctrl` + `K` | Open search |
+| `Cmd` + `B` / `Ctrl` + `B` | Toggle the sidebar |
+
+On screens 768px and wider, `Cmd`/`Ctrl` + `B` collapses and expands the sidebar column; below that it opens and closes the sidebar drawer. Both shortcuts are ignored while you are typing in a text field, so they never swallow a keystroke mid-search.
+
+<Callout type="info">
+Search indexes page titles and headings across every page in this site, so searching for a function name such as `listApprovedJobs` or a table name such as `trackedApplications` is usually faster than navigating the sidebar.
+</Callout>

@@ -1,71 +1,145 @@
 ---
 title: Authentication
-description: How authentication works with Clerk and Convex
+description: How Clerk sessions reach Convex, where roles actually live, and what enforces authorization
 ---
 
-# Authentication
+Clerk owns identity: sign-up, sign-in, OAuth and sessions. Convex owns authorization: every query and mutation that needs a user calls `ctx.auth.getUserIdentity()` and checks the caller's role itself. Roles live in the Convex `profiles` table, not in Clerk. Nothing is protected by middleware — `src/proxy.ts` attaches the Clerk session but guards no route — so authorization is enforced inside Convex functions, with page-level redirects as a convenience on top.
 
-FirstDevJob uses Clerk for authentication, integrated with Convex for backend authorization.
+## Sign-in flows
 
-## Auth Providers
+There are two entry points, both backed by Clerk.
 
-Users can sign in with:
+| Entry point | File | Flows offered |
+|---|---|---|
+| Modal, opened from the header and from "Post Job" while signed out | `src/components/AuthModal.tsx` | Email + password sign-in; email + password sign-up followed by a 6-digit email verification code; OAuth via `oauth_github` and `oauth_google` |
+| Dedicated page at `/auth/login` | `src/app/auth/login/[[...rest]]/page.tsx` | Clerk's `<SignIn routing="path">` component, which renders whichever methods are enabled in the Clerk dashboard |
 
-- **GitHub** - OAuth 2.0
-- **Google** - OAuth 2.0
-- **Email** - Magic link or password
+The modal drives Clerk's hooks directly: `signIn.create({ identifier, password })` for sign-in, `signUp.create(...)` followed by `prepareEmailAddressVerification({ strategy: "email_code" })` and `attemptEmailAddressVerification({ code })` for sign-up, and `signIn.authenticateWithRedirect({ strategy, redirectUrl: "/auth/sso-callback", redirectUrlComplete: "/" })` for OAuth. `/auth/sso-callback` renders Clerk's `<AuthenticateWithRedirectCallback />` and nothing else.
 
-## Integration Architecture
+<Callout type="warn">
+There is no magic-link flow. The email option is a password plus a one-time verification code sent at sign-up. The modal renders both a GitHub and a Google button, but whether a provider works depends on it being enabled in the Clerk dashboard — the repository cannot tell you which are switched on.
+</Callout>
 
-```
-User → Clerk → JWT Token → Convex → Validate → Execute
-```
+The login page reads a `redirect_url` query parameter and sanitizes it: anything that is not a same-origin path starting with a single `/` falls back to `/dashboard`. That check is what keeps the redirect from becoming an open redirect.
 
-### Frontend Setup
+## From sign-in to a Convex identity
 
-The app is wrapped with `ClerkProvider`:
+<Mermaid
+  title="Sign-in, token handoff, and first-time profile creation"
+  chart={`
+sequenceDiagram
+  participant U as User
+  participant A as AuthModal or SignIn page
+  participant K as Clerk
+  participant R as React app
+  participant X as Convex backend
+  U->>A: password, verification code or OAuth
+  A->>K: Clerk sign-in
+  K-->>R: active session
+  R->>K: request JWT for template convex
+  K-->>R: signed JWT
+  R->>X: query or mutation with JWT attached
+  X->>K: fetch JWKS from CLERK_JWT_ISSUER_DOMAIN
+  X->>X: ctx.auth.getUserIdentity()
+  R->>X: useAuth effect calls api.users.ensureProfile
+  X->>X: insert profiles row, role user, if none exists
+  X-->>R: profile
+`}
+/>
 
-```tsx
-<ClerkProvider>
-  <ConvexClientProvider>
-    {children}
-  </ConvexClientProvider>
-</ClerkProvider>
-```
+Three pieces connect Clerk to Convex:
 
-### Backend Validation
+1. `src/app/layout.tsx` wraps the tree in `<ClerkProvider>` and then `<ConvexClientProvider>`. When `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is missing the app renders without either provider, which is what lets CI build without Clerk secrets.
+2. `src/components/ConvexClientProvider.tsx` uses `ConvexProviderWithClerk` with Clerk's `useAuth`, so the Convex client always sends a current token.
+3. `convex/auth.config.ts` declares one provider: `domain: process.env.CLERK_JWT_ISSUER_DOMAIN` and `applicationID: "convex"` — matching a Clerk JWT template named `convex`.
 
-Convex functions access user identity:
+<Callout type="error">
+`CLERK_JWT_ISSUER_DOMAIN` is set on the **Convex** deployment, not in `.env.local` for Next.js, and its value is the issuer domain only — for example `https://clerk.example.com` — never the full JWKS URL. Convex dev and prod are separate deployments with separate environment variables, so a working dev setup says nothing about prod. Set prod with `bunx convex env set CLERK_JWT_ISSUER_DOMAIN <domain> --prod`.
+</Callout>
+
+### Profiles are created lazily
+
+There is no Clerk webhook and no user sync job. `src/hooks/useAuth.ts` calls the `api.users.ensureProfile` mutation once per session after Convex reports the user as authenticated; the mutation inserts a `profiles` row with `userId: identity.subject`, `fullName` from the Clerk identity, and `role: "user"` only if no row exists. The hook guards with a ref and resets it if the call fails, so it retries on the next render pass rather than looping.
+
+A consequence worth knowing: a user can be authenticated with no profile row for a moment. `api.admin.checkUserRole` and `api.dashboard.getDashboardData` both handle a missing profile by reporting no privileges rather than throwing.
+
+## Roles and authorization
 
 ```typescript
-export const myFunction = mutation({
+// convex/schema.ts
+profiles: defineTable({
+  userId: v.string(),
+  fullName: v.optional(v.string()),
+  role: v.union(v.literal("user"), v.literal("moderator"), v.literal("admin")),
+}).index("by_userId", ["userId"]),
+```
+
+That field is the single source of truth. Roles are **not** stored in Clerk metadata and nothing syncs them. Every new profile is created as `user`, and there is no promotion UI or mutation — changing someone to `moderator` or `admin` means editing the `profiles` row in the Convex dashboard or through a one-off `bunx convex run` against an internal function.
+
+<Mermaid
+  title="What each role can call"
+  chart={`
+flowchart TD
+  AN["Anonymous"] --> PUB["Public reads: jobs.listApprovedJobs, jobs.getApprovedJobFilterOptions, tags.getAllTags, emailSubscriptions.unsubscribeByToken"]
+  US["role: user"] --> PUB
+  US --> OWN["Own data: jobs.postJob, bookmarks.toggleBookmark, bookmarks.updateBookmarkStatus, bookmarks.removeTrackedApplication, profiles.updateUserName, profiles.deleteAccount, email subscription mutations"]
+  MO["role: moderator"] --> OWN
+  MO --> MOD["requireModOrAdmin: admin.getPendingJobs, admin.getApprovedJobs, admin.updateJobStatus, admin.markJobOutdated, admin.deleteJob"]
+  AD["role: admin"] --> MOD
+`}
+/>
+
+| Role | Can do | Enforced by |
+|---|---|---|
+| Anonymous | Browse approved jobs, read filter options and tags, unsubscribe with a token | Nothing — these functions do not require an identity |
+| `user` | Everything above, plus post jobs, track applications, edit their own name, manage email notifications, delete their own data | `requireAuth(ctx)` or an inline `getUserIdentity()` check, plus a `userId` ownership comparison on each tracked application |
+| `moderator` | Everything above, plus approve, reject, mark outdated and delete any job | `requireModOrAdmin(ctx)` in `convex/admin.ts` |
+| `admin` | The same set as `moderator` today | `requireModOrAdmin(ctx)` accepts both roles |
+
+`admin` currently grants nothing beyond `moderator`. The only difference is cosmetic: `api.admin.checkUserRole` returns `isAdmin`, and `AdminSection` titles the panel "Admin Panel" instead of "Moderator Panel". There is no user-management surface in the app.
+
+Ownership checks are separate from role checks. `bookmarks.removeTrackedApplication` and `bookmarks.updateBookmarkStatus` load the row and throw `"Unauthorized"` when `bookmark.userId !== identity.subject`, so a valid session cannot touch another user's tracked applications.
+
+## Checking auth in a Convex function
+
+```typescript
+import { mutation } from "./_generated/server";
+import { requireAuth } from "./auth";
+
+export const example = mutation({
+  args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    // User is authenticated
-    const userId = identity.subject;
+    const identity = await requireAuth(ctx); // throws "Not authenticated"
+    const userId = identity.subject;         // the Clerk user id
   },
 });
 ```
 
-## Protected Routes
+`convex/auth.ts` exports exactly two helpers: `requireAuth(ctx)`, which throws when there is no identity, and `getAuth(ctx)`, which returns `null` instead. Queries that should degrade gracefully for signed-out visitors — `jobs.listApprovedJobs`, `bookmarks.getUserBookmarks`, `dashboard.getDashboardData`, `emailSubscriptions.getMySubscription` — call `ctx.auth.getUserIdentity()` directly and return a safe empty result.
 
-Use Clerk's middleware for route protection:
+## Route protection
 
-- `/admin/*` - Requires admin role
-- `/profile/*` - Requires authentication
-- `/` - Public access
+<Callout type="warn">
+`src/proxy.ts` — Next.js 16's replacement for `middleware.ts` — exports a bare `clerkMiddleware()` with no `createRouteMatcher` and no `auth.protect()` call. Its `config.matcher` only controls which requests the middleware *runs on*; it protects nothing. Do not treat a route as secured because the middleware runs there.
+</Callout>
 
-## User Roles
+What actually gates the two signed-in pages:
 
-| Role | Capabilities |
-|------|-------------|
-| User | Browse, bookmark, track applications |
-| Moderator | Approve/reject job submissions |
-| Admin | Full access, user management |
+| Route | Mechanism | Behaviour when signed out |
+|---|---|---|
+| `/profile` | Server component calls Clerk's `auth()` in `src/app/profile/page.tsx` | `redirect("/auth/login?redirect_url=%2Fprofile")` before any HTML is sent |
+| `/dashboard` | Client component effect in `src/app/dashboard/page.tsx` | `router.push("/auth/login?redirect_url=%2Fdashboard")` after hydration; renders a skeleton, then `null`, in the meantime |
 
-Roles are stored in Clerk metadata and synced to Convex.
+Neither redirect is a security boundary. `/dashboard`'s check runs in the browser, and the moderation panel it hosts is rendered from `getDashboardData`, which returns an empty `pendingJobs` array to non-moderators and a `userRole` of all-false. The real boundary is `requireModOrAdmin` inside `convex/admin.ts`: a crafted client call to `api.admin.updateJobStatus` throws `"Unauthorized"` regardless of what the UI shows.
+
+Signing out is handled by Clerk's `signOut()` from the header, followed by a hard navigation to `/` to clear client state.
+
+## The one unauthenticated mutation
+
+`api.emailSubscriptions.unsubscribeByToken` takes an opaque `unsubscribeToken` and requires no session, because unsubscribe links have to work from an inbox. The token is a `crypto.randomUUID()` generated when the subscription is first created and deliberately preserved across re-subscribes, so links already sitting in old emails keep working. An unknown token returns `{ success: false }` rather than an error. Every other subscription mutation goes through `requireAuth`.
+
+## Related pages
+
+- [Data Flow](/docs/architecture/data-flow) — how an authenticated request is served and what approval triggers
+- [Admin API](/docs/api-reference/admin) — the moderation functions behind `requireModOrAdmin`
+- [Deployment](/docs/technical/deployment) — where each Clerk variable has to be set

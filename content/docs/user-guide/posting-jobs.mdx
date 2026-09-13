@@ -1,47 +1,104 @@
 ---
 title: Posting Jobs
-description: How to submit a job listing
+description: Submit an entry-level role for review and listing
 ---
 
-# Posting Jobs
+import { Steps, Step } from 'fumadocs-ui/components/steps';
 
-Help the community by sharing entry-level job opportunities.
+Anyone with an account can put a job on the board. You fill in a short form that points at the employer's own posting, a moderator reads it, and if it fits the site it goes live. Posting is free, and applications go to the employer's page rather than to us.
 
-## Submission Process
+## Before you start
 
-1. Click **Submit Job** in the navigation
-2. Fill out the job details form
-3. Submit for review
+You have to be signed in. **Post Job** in the header and **Post a Job** on the home page both open the sign-in window first if you are not. See [Getting Started](/docs/user-guide/getting-started).
 
-## Required Information
+Post roles that suit the people who use this site: internships, placements, graduate schemes, and junior or early-career developer jobs. Post the role once, and only while it is still open.
 
-| Field | Description |
-|-------|-------------|
-| Job Title | The position title |
-| Company | Company name |
-| Position Level | Intern, Graduate, or Early Career |
-| Location | City, state, or "Remote" |
-| Job Posting URL | Link to application page |
-| Tags | Relevant technologies |
+## Fill in the form
 
-## Review Process
+<Steps>
 
-All job submissions are reviewed before appearing on the site:
+<Step>
 
-- Jobs are reviewed by moderators
-- Approved jobs appear in the listings
+**Click Post Job.** It is in the header on every page, and there is a **Post a Job** button on the home page too.
 
-## Security Checks
+</Step>
 
-The form is validated server-side before a job is saved:
+<Step>
 
-- Required fields are normalized and validated
-- URLs must be public `http`/`https` links
-- URLs with local/private-network hosts are rejected
-- Rate limits apply to reduce submission abuse
+**Enter the job title, company name, and location.** All three are required, and each can be up to 120 characters. Write the location the way you want it to read on the card — it becomes an option in the board's location dropdown exactly as you type it, so matching an existing spelling such as "Dublin, Ireland" keeps the list tidy.
 
-## Guidelines
+</Step>
 
-- Only post entry-level or junior positions
-- Ensure the job is currently accepting applications
-- Provide accurate company information
+<Step>
+
+**Choose a position level:** Intern, Graduate, or Early Career. This is required, and it decides which level badge the card shows, which filter finds it, and which subscribers get an email about it.
+
+</Step>
+
+<Step>
+
+**Paste the job posting URL** — the page where someone can actually apply. It has to start with `http://` or `https://`.
+
+</Step>
+
+<Step>
+
+**Add technologies and skills (optional).** Type to search the tags already on the site and pick one, or type something new and choose **Add "..."** to create it. There is a quick-select row of existing tags underneath. You can add up to 10 tags, each up to 32 characters.
+
+</Step>
+
+<Step>
+
+**Click Post Job.** A confirmation appears telling you the posting will be reviewed and added within 24 hours if it is a good fit.
+
+</Step>
+
+</Steps>
+
+## Rules the form enforces
+
+These are checked on the server, so they apply however the form is filled in:
+
+| Field | Rule |
+| --- | --- |
+| Job title | Required, up to 120 characters |
+| Company name | Required, up to 120 characters |
+| Location | Required, up to 120 characters |
+| Position level | Required — Intern, Graduate, or Early Career |
+| Job posting URL | Required, up to 2,048 characters, must start with `http://` or `https://` |
+| Tags | Optional, up to 10, each up to 32 characters |
+
+A URL is also rejected if it carries sign-in details (the `user:password@host` form), or if it points somewhere only you can reach — `localhost`, a `.local` or `.internal` name, or a private network address. The posting has to open for anyone.
+
+Repeated tags are merged: adding `React` and `react` leaves one tag, spelled the way you first typed it.
+
+<Callout type="warn" title="There is a limit on how often you can post">
+You can submit 6 jobs per hour and 20 jobs per day. Past either, submissions are refused until enough time has passed. Bulk-posting a whole careers page is not what the board is for.
+</Callout>
+
+## What happens after you submit
+
+<Mermaid
+  title="A submission from the form to the board"
+  chart={`
+flowchart TD
+  submit["You submit the form"] --> pending["Waiting for review"]
+  pending --> review{"A moderator reviews it"}
+  review -->|"Approves"| listed["Listed on the job board"]
+  review -->|"Rejects"| notlisted["Not listed"]
+  listed -->|"After about 14 days"| outdated["Drops off as outdated"]
+  notlisted -->|"After 14 days"| gone["Deleted"]
+  pending -->|"Still unreviewed after 14 days"| gone
+`}
+/>
+
+Your submission is held as **pending** and the moderators are emailed about it. If it is approved it appears on the board straight away, and everyone whose [email notifications](/docs/user-guide/email-notifications) match its position level gets a message about it. If it is rejected it never appears.
+
+Approved listings run for about 14 days and then drop off the board as outdated. Anyone who saved the job keeps it in their tracker, marked as closed. Pending and rejected submissions are deleted after 14 days.
+
+## Limits worth knowing
+
+- **You cannot edit or delete a submission.** There is no "my postings" view, and a pending submission is only visible to moderators. If you got something wrong, submit the corrected version and raise the mistake through the **Feedback** link in the footer so a moderator can drop the bad one.
+- **You are not told when a moderator decides.** Check the board to see whether it went live. The one exception: if you have [email notifications](/docs/user-guide/email-notifications) switched on and your job matches your own filters, you get the same alert every other subscriber does.
+- **There is no way to renew a listing.** When the 14 days are up, submit it again if the role is still open.
+- **There is no salary, description, or company logo field.** The card carries the title, company, level, location, date, and tags, and everything else lives behind your URL — so link to the full posting, not a careers homepage.

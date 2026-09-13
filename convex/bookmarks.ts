@@ -47,8 +47,8 @@ export const toggleBookmark = mutation({
         (existing.notes?.trim().length ?? 0) > 0;
 
       if (hasProgress) {
-        // Never destroy status or notes from a list-page toggle; the
-        // dashboard has the confirm-gated remove.
+        // Never destroy status or notes from a list-page toggle; removal
+        // is an explicit action on the dashboard.
         return { bookmarked: true, tracked: true };
       }
 

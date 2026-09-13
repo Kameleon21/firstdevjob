@@ -2,6 +2,7 @@ import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { ReactNode } from 'react';
 import { source } from '@/lib/source';
+import { DocsKeyboardShortcuts } from './keyboard-shortcuts';
 import './globals.css';
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -34,6 +35,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           defaultOpenLevel: 1,
         }}
       >
+        <DocsKeyboardShortcuts />
         {children}
       </DocsLayout>
     </RootProvider>

@@ -1,33 +1,72 @@
 ---
 title: Tech Stack
-description: Technologies powering FirstDevJob
+description: Every dependency and service FirstDevJob runs on, with the version declared in package.json
 ---
 
-## Why These Choices?
+This page lists what the project actually depends on and why. Versions are the specifiers declared in `package.json` at the root of the repo; `bun.lock` holds the exact resolved versions. If a version here disagrees with `package.json`, `package.json` wins.
 
-### Next.js + React
+## Runtime dependencies
 
-- Industry standard for React applications
-- Excellent developer experience
-- Built-in optimizations (SSR, ISR, code splitting)
+| Package | Version | Role |
+|---|---|---|
+| `next` | `16.3.5` | App Router framework, pinned exactly rather than to a range |
+| `react`, `react-dom` | `^19.2.4` | UI runtime |
+| `convex` | `^1.31.7` | Database, queries, mutations, actions, crons, and the React client |
+| `@clerk/nextjs` | `^6.37.1` | Auth provider, sign-in UI, `clerkMiddleware`, server `auth()` |
+| `@convex-dev/resend` | `^0.2.3` | Convex component that queues and sends email through Resend |
+| `fumadocs-core` | `^16.5.0` | Docs content loader and search backend |
+| `fumadocs-ui` | `^16.5.0` | Docs layout, sidebar, search dialog, MDX components |
+| `fumadocs-mdx` | `^14.2.6` | Compiles `content/docs/**/*.mdx` into the `.source` bundle |
+| `mermaid` | `^12.0.0` | Renders the diagrams in these docs, loaded lazily client-side |
+| `lucide-react` | `^0.513.0` | Icon set |
+| `next-themes` | `^0.4.6` | Theme state for the docs layout and diagram colours |
 
-### Convex
+## Build and development tooling
 
-- Real-time subscriptions out of the box
-- Type-safe end-to-end
-- No need to manage infrastructure
-- Built-in cron jobs and scheduled functions
+| Package | Version | Role |
+|---|---|---|
+| `typescript` | `^5.9.3` | Strict typing end to end, including generated Convex types |
+| `tailwindcss` + `@tailwindcss/postcss` | `^4.1.18` | Styling, configured through PostCSS rather than a `tailwind.config` file |
+| `eslint` + `eslint-config-next` | `^9.39.2` / `15.5.11` | Linting |
+| `prettier` | `^3.8.1` | Formatting |
+| `jest`, `jest-environment-jsdom` | `^30` | Test runner |
+| `ts-jest` | `^29.4.6` | TypeScript transform for Jest |
+| `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event` | see `package.json` | Component tests |
+| `@next/bundle-analyzer` | `^15.5.11` | Opt-in bundle report, enabled by `ANALYZE=true` |
 
-### Clerk
+<Callout type="info">
+The package manager is Bun, pinned to `1.4.2` by the `packageManager` field and by `BUN_VERSION` in `.github/workflows/ci.yml`. Use `bun install`, `bun run <script>` and `bunx`, not npm or npx — the repo ships `bun.lock` and CI installs with `bun install --frozen-lockfile`.
+</Callout>
 
-- Quick integration with Next.js
-- Multiple OAuth providers
-- User management dashboard
-- Webhooks for user events
+## Services
 
-### Tailwind CSS
+| Service | What it does here | Configured by |
+|---|---|---|
+| Convex | Hosts the database and all backend functions. Separate dev and prod deployments | `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL`, `convex.json` |
+| Clerk | Sign-in, sessions, OAuth, and the JWT template named `convex` | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_JWT_ISSUER_DOMAIN` |
+| Resend | Sends staff and subscriber notification email from Convex actions | `RESEND_API_KEY`, `RESEND_TEST_MODE`, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `STAFF_NOTIFICATION_EMAILS` |
+| Vercel | Hosts the Next.js app; the Git integration builds and deploys the frontend | Vercel project settings |
+| GitHub Actions | Runs CI on every pull request and deploys Convex on pushes to `Master` | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml` |
+| Cloudflare | DNS for the production domain | Managed outside this repo — nothing in the codebase references it |
 
-- Utility-first approach speeds development
-- Consistent design system
-- Easy dark mode support
-- Small production bundle
+The Resend integration is registered as a Convex component in `convex/convex.config.ts` (`app.use(resend)`) and instantiated in `convex/resend.ts`. It defaults to test mode: real mail only leaves the system when `RESEND_TEST_MODE` is explicitly set to `false`, `0` or `no`.
+
+## Why these choices
+
+**Convex over a REST or GraphQL API.** Queries are subscriptions, so the job list, dashboard and moderation panel stay current without polling or cache invalidation code. Function arguments are validated by `v.*` validators at the boundary and the generated `api` object gives the frontend compile-time errors when a function is renamed. Crons and scheduled actions come with the platform, so there is no separate worker to deploy.
+
+**Clerk over rolling auth.** Convex has first-party Clerk support: `convex/auth.config.ts` declares the issuer domain and application ID, and `ConvexProviderWithClerk` keeps the token fresh. Password, email-code verification and OAuth all come from one provider.
+
+**Resend through the Convex component** rather than a direct HTTP call. The component persists the send in Convex and handles queueing and retries, so a transient Resend failure does not need to be handled inside each mutation.
+
+**Fumadocs for docs** because the content stays as MDX in the repo, next to the code it describes, and ships as part of the same Next.js build. Search is a local index built at request time from `source.getPages()` — no external search service.
+
+**Bun** for install and script speed; CI uses the same version as local development to keep lockfile resolution identical.
+
+## Testing
+
+Jest with `ts-jest` and the jsdom environment, configured in `jest.config.js`. `bun run test:coverage` produces the coverage report; CI runs `bun run test:ci`. The pure helper modules in `convex/` (`applicationIntegrity.ts`, `jobSubmissionSecurity.ts`, `jobHelpers.ts`) exist partly so that submission validation and status-transition rules can be tested without a Convex context.
+
+## Security headers
+
+`next.config.ts` sets `Strict-Transport-Security`, `X-Frame-Options: DENY`, `X-Content-Type-Options`, `Referrer-Policy`, a restrictive `Permissions-Policy`, and a `Content-Security-Policy` limited to `frame-ancestors 'none'`. A full CSP would need an allowlist covering Clerk, Convex and Vercel, so only the clickjacking protection is enforced today — that is a deliberate, documented gap in the config, not an oversight.

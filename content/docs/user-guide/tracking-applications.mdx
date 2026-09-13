@@ -1,35 +1,104 @@
 ---
 title: Tracking Applications
-description: Keep track of your job applications
+description: Follow every job you saved from Saved through to Accepted
 ---
 
-# Tracking Applications
+import { Steps, Step } from 'fumadocs-ui/components/steps';
 
-Stay organized with the built-in application tracker.
+Every job you bookmark becomes a tracked application on your dashboard, starting at **Saved**. From there you move it along as things happen — Applied, Interviewing, Offer — and write notes against it. The tracker keeps working even after the original posting comes down, so a long process never loses its history.
 
-## Application States
+## Start tracking a job
 
-Track your applications through different stages:
+<Steps>
 
-| Status | Description |
-|--------|-------------|
-| Bookmarked | Saved for later |
-| Applied | Application submitted |
-| Interview | Interview scheduled |
-| Offer | Received an offer |
-| Rejected | Application not selected |
-| Accepted | Offer accepted |
+<Step>
 
-## Managing Applications
+**Sign in**, then find the job on the home page.
 
-1. Open a bookmarked job
-2. Click "Track Application"
-3. Update the status as your application progresses
-4. Add notes for your reference
+</Step>
 
-## Tips
+<Step>
 
-- Update statuses promptly to keep your tracker accurate
-- Use notes to record interview details and follow-up dates
-- Review your tracker regularly to follow up on applications
-- Status transitions follow a valid progression (for example, you cannot move directly from `saved` to `accepted`)
+**Click the bookmark icon** in the top-right of the job card. The job is added to your tracker at the **Saved** status.
+
+</Step>
+
+<Step>
+
+**Open your dashboard** from the header, or go to `/dashboard`. Every job you have saved is there, newest first, with a count above the list.
+
+</Step>
+
+</Steps>
+
+## Move an application along
+
+Each card on the dashboard has a status pill in its top-right corner. Click it to open the list of statuses you are allowed to move to from where you are now, and pick one. The change saves immediately.
+
+| Status | What it means |
+| --- | --- |
+| Saved | Bookmarked, not applied yet. This is where every job starts. |
+| Applied | You sent your application. |
+| Interviewing | You are in the interview process. |
+| Offer | You have an offer. |
+| Rejected | It did not work out, at any stage. |
+| Accepted | You took the offer. |
+
+The dropdown only lists the moves that make sense from your current status, so you will not see every status every time. Notably, you cannot jump from **Saved** straight to **Offer** or **Accepted** — mark it **Applied** or **Interviewing** first.
+
+Both end states can be undone. From **Rejected** you can go back to Saved, Applied, Interviewing, or Offer, and from **Accepted** you can go back to Offer or Rejected. A mis-click is never permanent.
+
+<Mermaid
+  title="Where an application can move next"
+  chart={`
+stateDiagram-v2
+  [*] --> saved
+  saved --> applied
+  saved --> interviewing
+  saved --> rejected
+  applied --> interviewing
+  applied --> offer
+  applied --> rejected
+  interviewing --> offer
+  interviewing --> rejected
+  offer --> accepted
+  offer --> rejected
+  rejected --> saved
+  rejected --> applied
+  rejected --> interviewing
+  rejected --> offer
+  accepted --> offer
+  accepted --> rejected
+`}
+/>
+
+## Add notes
+
+Each card has a **Notes** box. Click the box or the pencil icon, type, and click **Save**. **Cancel** throws away your edit and puts the old text back.
+
+Notes are yours alone and are a good place for the recruiter's name, the interview date, the salary you were quoted, or what to follow up on. Blank space at the start and end is trimmed off when you save, and a note can be up to 2,000 characters — a longer one is refused rather than cut short.
+
+## When a posting closes
+
+Listings do not stay up forever, but your tracked application does. A closed one keeps its status, its notes, and the job details as they were, and shows a **Job closed** badge with one of two explanations:
+
+- *This posting has closed and is no longer accepting applications.* — the listing was marked outdated, either because its 14 days on the board ran out or because a moderator closed it early.
+- *The original posting was removed, but you can keep tracking your progress.* — the listing was deleted outright, so only the copy saved into your tracker is left.
+
+Either way the **View Job Posting** link is replaced by **Posting no longer available**, because the link would no longer go anywhere useful.
+
+<Callout type="info" title="This is the only place some jobs still exist">
+A closed listing is gone from the board and cannot be searched for again. Your tracker card is the surviving copy, so keep your notes there.
+</Callout>
+
+## Remove an application
+
+Click **Remove from tracker** at the bottom of the card. It deletes the tracked application, along with its status history and notes, and it takes effect straight away — there is no confirmation step and no undo. The job itself is untouched, so you can bookmark it again while it is still listed.
+
+This button is also the way to drop a job whose bookmark will no longer turn off on the job board. Once an application has moved past **Saved** or has notes, the bookmark icon stops removing it and shows **Tracked. Manage in dashboard** instead — that link brings you here.
+
+## Limits worth knowing
+
+- There is no filtering, sorting, or searching on the dashboard. Cards are listed newest-saved first.
+- Nothing changes status on its own. The tracker reflects what you tell it.
+- The tracker is private to your account, and [deleting your account](/docs/user-guide/getting-started) deletes every tracked application with it.

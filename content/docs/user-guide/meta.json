@@ -1,4 +1,10 @@
 {
   "title": "User Guide",
-  "pages": ["getting-started", "browsing-jobs", "tracking-applications", "email-notifications", "posting-jobs"]
+  "pages": [
+    "getting-started",
+    "browsing-jobs",
+    "tracking-applications",
+    "email-notifications",
+    "posting-jobs"
+  ]
 }

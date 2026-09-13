@@ -1,4 +1,4 @@
 {
   "title": "API Reference",
-  "pages": ["jobs", "bookmarks", "profiles", "admin"]
+  "pages": ["jobs", "bookmarks", "profiles", "email-subscriptions", "admin"]
 }

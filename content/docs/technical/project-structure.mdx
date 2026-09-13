@@ -1,0 +1,175 @@
+---
+title: Project Structure
+description: What lives where in the FirstDevJob repository
+---
+
+The repository holds one Next.js App Router application in `src/`, one Convex backend in `convex/`, and the documentation you are reading in `content/docs/`. There is no monorepo tooling and no `src/pages`; every route is a file under `src/app`, and every backend function is a file under `convex/`. Tests sit in a top-level `tests/` directory rather than beside the code they cover.
+
+## Top level
+
+```text
+firstdevjob/
+├── src/                  # Next.js application (routes, components, hooks, lib)
+├── convex/               # Convex backend: schema, queries, mutations, actions, crons
+├── content/docs/         # MDX documentation source (this site)
+├── tests/                # Jest test suite
+├── public/               # Static assets: favicon, logos, SVGs
+├── .github/workflows/    # CI and deployment pipelines
+├── plan/                 # Scratch: implementation plans (not shipped, excluded from commits)
+├── tasks/                # Scratch: todo.md and lessons.md (not shipped, excluded from commits)
+├── convex.json           # Convex project, team and functions directory
+├── next.config.ts        # Security headers, MDX plugin, optional bundle analyzer
+├── source.config.ts      # Fumadocs MDX: points the docs loader at content/docs
+├── jest.config.js        # Jest: ts-jest, jsdom, coverage thresholds
+├── eslint.config.mjs     # Flat ESLint config
+├── postcss.config.mjs    # Tailwind CSS v4 via PostCSS
+├── tsconfig.json         # Path alias @/* to src/*
+├── .env.example          # Every environment variable name, with placeholder values
+├── CLAUDE.md             # Working agreements for the repo
+└── package.json          # Scripts and dependencies (Bun)
+```
+
+<Callout type="info">
+  `plan/` and `tasks/` are working notes, deliberately kept out of commits. Nothing in the app reads them, and nothing in them should be treated as documentation.
+</Callout>
+
+## src/app — routes
+
+Each directory is a URL segment; `page.tsx` makes it routable and `layout.tsx` wraps it.
+
+```text
+src/app/
+├── layout.tsx                    # Root layout: Clerk, Convex and theme providers, metadata
+├── page.tsx                      # /            job listing home page
+├── globals.css                   # App-wide Tailwind layer and design tokens
+├── dashboard/page.tsx            # /dashboard   tracked applications + moderation queue
+├── profile/page.tsx              # /profile     name, email notifications, delete account
+├── feedback/page.tsx             # /feedback    external feedback board embed
+├── privacy/page.tsx              # /privacy     privacy policy
+├── unsubscribe/page.tsx          # /unsubscribe?token=...  one-click email opt-out
+├── auth/
+│   ├── login/
+│   │   ├── layout.tsx
+│   │   └── [[...rest]]/page.tsx  # /auth/login  Clerk catch-all sign-in route
+│   └── sso-callback/
+│       ├── layout.tsx
+│       └── page.tsx              # /auth/sso-callback  OAuth return target
+├── api/
+│   └── search/route.ts           # /api/search  Fumadocs search index endpoint
+└── docs/
+    ├── layout.tsx                # Fumadocs shell: sidebar, search, theme
+    ├── globals.css               # Docs-only styles
+    ├── nav-toolbar.tsx           # Table-of-contents header controls
+    ├── keyboard-shortcuts.tsx    # Docs keyboard shortcut handling
+    └── [[...slug]]/page.tsx      # /docs/*  renders MDX from content/docs
+```
+
+The docs route renders `page.data.title` and `page.data.description` from each MDX file's frontmatter as the page heading, which is why MDX bodies must not start with their own H1.
+
+## src/components
+
+Flat, one component per file, PascalCase, default or named React components. Client components are marked `"use client"`.
+
+| Component | Role |
+|---|---|
+| `Header.tsx`, `SiteFooter.tsx`, `HeroSection.tsx` | Site chrome |
+| `PageWrapper.tsx` | Home page shell; loads the tag vocabulary |
+| `JobSearch.tsx`, `JobSearchWrapper.tsx` | Search and filter UI; calls `jobs.listApprovedJobs` |
+| `JobCard.tsx`, `JobCardSkeleton.tsx` | A listing row and its loading state; calls `bookmarks.toggleBookmark` |
+| `PostJobModal.tsx` | Submission form; calls `jobs.postJob` |
+| `DashboardJobCard.tsx`, `DashboardJobCardSkeleton.tsx` | Tracked application card; status and notes writes |
+| `AdminSection.tsx`, `AdminJobCard.tsx` | Moderation queue and per-job actions |
+| `ProfilePage.tsx` | Profile, notification settings, account deletion |
+| `AuthModal.tsx` | Clerk sign-in entry point |
+| `ConvexClientProvider.tsx`, `ThemeProvider.tsx`, `ThemeToggle.tsx` | Providers and theme switch |
+| `Toast.tsx`, `ProgressIndicator.tsx` | Shared feedback primitives |
+| `docs/Mermaid.tsx` | Client-side Mermaid renderer used by MDX diagrams |
+
+`docs/` is the only subdirectory: it holds components that exist for the documentation site rather than the app.
+
+## src/hooks, src/lib and the two loose files
+
+```text
+src/
+├── hooks/
+│   └── useAuth.ts          # Convex auth state + calls users.ensureProfile once per session
+├── lib/
+│   ├── source.ts           # Fumadocs loader over the generated .source output
+│   ├── postJobError.ts     # Maps Convex submission errors to user-facing copy
+│   └── textHighlight.ts    # Highlights search matches in listing text
+├── mdx-components.tsx      # Registers Mermaid alongside the Fumadocs MDX components
+└── proxy.ts                # Clerk middleware (Next.js 16 names this file proxy.ts)
+```
+
+`src/proxy.ts` is the request middleware. Next.js 16 renamed `middleware.ts` to `proxy.ts`; it exports `clerkMiddleware()` and a matcher that skips static assets and always runs for API routes.
+
+## convex
+
+Every `.ts` file here is a module of the backend API, reachable as `api.<file>.<export>` from the client (or `internal.<file>.<export>` for internal functions).
+
+```text
+convex/
+├── schema.ts                  # The six tables, their validators and indexes
+├── auth.ts                    # requireAuth / getAuth helpers
+├── auth.config.ts             # Clerk issuer domain from CLERK_JWT_ISSUER_DOMAIN
+├── jobs.ts                    # Listing, filtering, submission, retention cron body
+├── jobHelpers.ts              # Role-level inference, job snapshot builder
+├── jobSubmissionSecurity.ts   # Submission validation, URL and tag rules
+├── bookmarks.ts               # Bookmarks and application tracking
+├── applicationIntegrity.ts    # Allowed status transitions, notes limit, history
+├── dashboard.ts               # One query backing the whole /dashboard page
+├── admin.ts                   # Moderation queue and actions, role gate
+├── profiles.ts                # Profile read, rename, account deletion
+├── users.ts                   # currentUser, ensureProfile
+├── emailSubscriptions.ts      # Notification subscriptions and unsubscribe
+├── notifications.ts           # Internal actions that compose and send email
+├── resend.ts                  # Resend component, test-mode-by-default
+├── tags.ts                    # Tag vocabulary query
+├── seed.ts                    # Internal mutation seeding default tags
+├── crons.ts                   # Daily cleanup schedule
+├── convex.config.ts           # Registers the Resend component
+├── _generated/                # Generated api/dataModel types — never edit by hand
+├── tsconfig.json
+└── README.md
+```
+
+`_generated/` is rewritten by `bunx convex dev` and by `bunx convex deploy`. It is committed so type checking works in CI without a Convex connection.
+
+## content/docs
+
+```text
+content/docs/
+├── meta.json            # Top-level sidebar order
+├── index.mdx
+├── user-guide/          # Product documentation for people using the site
+├── architecture/        # How the system fits together
+├── technical/           # Schema, structure, deployment, contributing
+└── api-reference/       # Per-module Convex function reference
+```
+
+Every directory has a `meta.json` listing its pages in sidebar order; a slug listed there with no matching `.mdx` file is a broken sidebar link, and a file not listed will not appear in the sidebar. Frontmatter `title` and `description` are rendered by the page template.
+
+## tests
+
+```text
+tests/
+├── components/          # React Testing Library tests for src/components
+├── convex/              # Pure-logic tests: applicationIntegrity, jobSubmissionSecurity
+├── lib/                 # postJobError, textHighlight
+├── setup/jest.setup.ts  # Testing Library matchers and global setup
+├── utils/testUtils.tsx  # Render helpers
+├── mocks/fileMock.js    # Static asset stub
+└── README.md
+```
+
+Convex tests target the pure helper modules, which is why the transition table and the submission validator live in their own files: they can be unit tested without a Convex runtime. See [Contributing](/docs/technical/contributing) for how to run them.
+
+## Conventions worth knowing
+
+| Convention | Detail |
+|---|---|
+| Package manager | Bun only. `bun install`, `bun run <script>`, `bunx <tool>` |
+| Import alias | `@/` resolves to `src/`; Convex is imported by relative path from `convex/_generated/api` |
+| Route naming | `[[...slug]]` catch-alls for docs and Clerk sign-in |
+| Styling | Tailwind CSS v4 with CSS variables defined in `globals.css` |
+| Shared rules | Logic used by both client and server (status transitions) lives in `convex/` and is imported into components |

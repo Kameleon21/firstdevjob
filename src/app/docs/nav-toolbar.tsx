@@ -7,9 +7,11 @@ import { useEffect, useState } from 'react';
 export function NavToolbar() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [isMac, setIsMac] = useState(true);
 
   useEffect(() => {
     setMounted(true);
+    setIsMac(/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent));
   }, []);
 
   return (
@@ -52,6 +54,18 @@ export function NavToolbar() {
           <div className="size-4.5" />
         )}
       </button>
+      <span
+        className="ml-auto hidden items-center gap-1 text-[11px] text-fd-muted-foreground md:inline-flex"
+        title="Toggle the sidebar"
+      >
+        <kbd className="rounded border border-fd-border bg-fd-muted px-1 py-0.5 font-mono text-[10px] text-fd-foreground">
+          {mounted && !isMac ? 'Ctrl' : '⌘'}
+        </kbd>
+        <kbd className="rounded border border-fd-border bg-fd-muted px-1 py-0.5 font-mono text-[10px] text-fd-foreground">
+          B
+        </kbd>
+        <span>sidebar</span>
+      </span>
     </div>
   );
 }

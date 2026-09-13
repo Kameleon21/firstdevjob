@@ -1,79 +1,134 @@
 ---
 title: Profiles API
-description: Convex functions for user profiles
+description: Convex functions for the signed-in user's profile, role and account deletion
 ---
 
-# Profiles API
+Clerk owns identity (email, password, OAuth). Convex stores one companion row per user in the `profiles` table holding just two things the app controls: an editable `fullName` and a `role` that gates moderation. The functions are split across two modules: `convex/users.ts` (session bootstrap) and `convex/profiles.ts` (read, rename, delete). Every function keys off `identity.subject`, the Clerk user id — a caller can never read or write another user's profile through this API.
 
-Functions for managing user profile information.
+<Callout type="warn">
+  There is no public profile: no `displayName`, `bio`, `links` or avatar fields exist, and there is no function to fetch another user's profile. The full field list is in [Database Schema](/docs/technical/database-schema).
+</Callout>
 
-## Queries
+## `users.currentUser`
 
-### `get`
+Session bootstrap query used by the `useAuth` hook (`src/hooks/useAuth.ts`).
 
-Get the current user's profile.
+| | |
+|---|---|
+| Kind | `query` |
+| Auth | Anonymous allowed — returns `null` when signed out |
+| Args | none |
 
-```typescript
-const profile = useQuery(api.profiles.get);
-```
-
-**Authentication:** Required
-
-**Returns:** Profile object or null if not created.
-
-### `getByUserId`
-
-Get a profile by user ID (for viewing other users).
+**Returns:** `null`, or `{ id, email, profile }` where `id` is the Clerk user id, `email` comes from the Clerk identity token, and `profile` is the raw `profiles` document (or `null` if the row has not been created yet).
 
 ```typescript
-const profile = useQuery(api.profiles.getByUserId, { userId });
+const user = useQuery(api.users.currentUser);
+// user?.profile?.role === "admin"
 ```
 
-**Parameters:**
-- `userId` - Clerk user ID
+## `users.ensureProfile`
 
-**Returns:** Public profile data.
+Creates the `profiles` row the first time a user signs in. Idempotent: if a row already exists it is returned untouched.
 
-## Mutations
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Authenticated |
+| Args | none |
 
-### `update`
+**Returns:** the `profiles` document.
 
-Update the current user's profile.
+New rows are inserted with `fullName` taken from the Clerk identity `name` (or omitted) and `role: "user"`. Nothing in the API can escalate a role — promoting someone to `moderator` or `admin` is a manual edit in the Convex dashboard.
+
+**Throws:** `Not authenticated`.
 
 ```typescript
-const updateProfile = useMutation(api.profiles.update);
-
-await updateProfile({
-  displayName: "Jane Developer",
-  bio: "Frontend developer learning React",
-  links: {
-    github: "https://github.com/jane",
-    linkedin: "https://linkedin.com/in/jane",
-  },
-});
+const ensureProfile = useMutation(api.users.ensureProfile);
+await ensureProfile();
 ```
 
-**Authentication:** Required
+`useAuth` calls this once per session after Convex reports the user as authenticated, so pages generally do not need to call it themselves.
 
-**Parameters:**
-| Field | Type | Required |
-|-------|------|----------|
-| displayName | string | No |
-| bio | string | No |
-| links | object | No |
+## `profiles.getUserProfile`
 
-**Returns:** Updated profile object.
+The profile page's read (`src/components/ProfilePage.tsx`).
 
-### `create`
+| | |
+|---|---|
+| Kind | `query` |
+| Auth | Authenticated |
+| Args | none |
 
-Create a profile for a new user (called automatically on first sign-in).
+**Returns** one of:
+
+| Shape | When |
+|---|---|
+| `{ id, email, fullName, role }` | Signed in and the profile row exists. `fullName` is `null` when unset. |
+| `{ error: "Not authenticated" }` | No Clerk identity on the request |
+| `{ error: "Profile not found" }` | Signed in, but `users.ensureProfile` has not run yet |
+
+<Callout type="info">
+  This query returns error objects instead of throwing, so callers must check for the `error` key before reading `role`. The other profile functions throw.
+</Callout>
+
+## `profiles.updateUserName`
+
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Authenticated |
+
+| Arg | Type | Required | Notes |
+|---|---|---|---|
+| `fullName` | `string` | Yes | Trimmed server-side |
+
+**Returns:** `{ success: true }`, or `{ error: "Name is required" }` when the trimmed value is empty, or `{ error: "Profile not found" }`.
+
+**Throws:** `Not authenticated`.
 
 ```typescript
-const createProfile = useMutation(api.profiles.create);
-
-await createProfile({
-  displayName: identity.name,
-});
+const updateUserName = useMutation(api.profiles.updateUserName);
+await updateUserName({ fullName: "Jane Developer" });
 ```
 
-**Authentication:** Required
+There is no length cap on `fullName` in the mutation.
+
+## `profiles.deleteAccount`
+
+Deletes everything this app stores about the caller. It does **not** delete the Clerk user; the profile page calls this mutation first and then calls Clerk's `user.delete()`.
+
+| | |
+|---|---|
+| Kind | `mutation` |
+| Auth | Authenticated |
+| Args | none |
+
+Deleted, in order: every `trackedApplications` row for the user, every `jobNotificationDeliveries` row for the user, the `emailSubscriptions` row (if any), and the `profiles` row (if any).
+
+**Returns:**
+
+| Field | Type | Meaning |
+|---|---|---|
+| `success` | `boolean` | Always `true` when the mutation completes |
+| `deletedTrackedApplicationsCount` | `number` | Tracked applications removed |
+| `deletedNotificationDeliveriesCount` | `number` | Email delivery receipts removed |
+| `deletedEmailSubscription` | `boolean` | Whether a subscription row existed |
+| `deletedProfile` | `boolean` | Whether a profile row existed |
+
+**Throws:** `Not authenticated`.
+
+<Callout type="warn">
+  Jobs the user submitted are not deleted. `jobs.submitterUserId` keeps the Clerk id of a deleted account until the retention cron removes the job (see [Jobs API](/docs/api-reference/jobs)).
+</Callout>
+
+## Roles
+
+`profiles.role` is the only authorization input in the backend.
+
+| Role | Can do |
+|---|---|
+| `user` | Browse, bookmark, track applications, submit jobs, manage email notifications |
+| `moderator` | Everything above, plus every function in the [Admin API](/docs/api-reference/admin) |
+| `admin` | Same permissions as `moderator`; the two are only distinguished in the UI |
+
+The dashboard reads roles through `dashboard.getDashboardData`, which returns `userRole: { isAdmin, isModerator, userEmail, role }` in the same round trip as the rest of the page data.
